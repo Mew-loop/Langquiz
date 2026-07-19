@@ -91,7 +91,7 @@
     </style>
 </head>
 <body>
-    <!-- این تگ نامرئی، صدای گوگل را مثل یک افکت صوتی دانلود و پخش میکند -->
+    <!-- تگ نامرئی برای پخش جایگزین گوگل -->
     <audio id="tts-player" style="display: none;"></audio>
 
     <div class="app-container">
@@ -104,7 +104,7 @@
             <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
         </div>
 
-        <!-- 1. Loading / Error Screen -->
+        <!-- 1. Loading -->
         <div id="loading-screen" class="screen active" style="justify-content: center; text-align: center;">
             <div class="loader" id="spinner"></div>
             <h3 id="loading-text" style="color: var(--text-sec); font-weight: 500;">Connecting...</h3>
@@ -149,10 +149,8 @@
     </div>
 
     <script>
-        // لینک گوگل اسکریپت
         const API_URL = 'https://script.google.com/macros/s/AKfycbxaFlDv6NHyQBZS1B5r8yu_0qwxU74cPNvm4YpVaLenCXleOQIDcQelXCDYVlb9wuVQ/exec'; 
         
-        // کدهای زبان برای API گوگل تنظیم شده‌اند
         const LANGUAGES = [
             { id: 0, name: "فارسی", emoji: "🇮🇷", ttsCode: "fa" },
             { id: 1, name: "English", emoji: "🇬🇧", ttsCode: "en" },
@@ -182,38 +180,75 @@
         let canAnswer = true;
         let currentRawTextForSpeech = ""; 
 
-        // --- باز کردن قفل تگ Audio در موبایل (بسیار مهم برای تلگرام) ---
-        let audioUnlocked = false;
-        function unlockAudio() {
-            if (!audioUnlocked) {
+        // --- باز کردن قفل رسانه برای موبایل با اولین تاچ ---
+        let mediaUnlocked = false;
+        function unlockMedia() {
+            if (!mediaUnlocked) {
+                // آنلاک کردن تگ Audio
                 const player = document.getElementById('tts-player');
-                player.play().catch(() => {}); 
-                audioUnlocked = true;
+                player.play().catch(()=>{});
+                
+                // آنلاک کردن موتور صوتی داخلی گوشی
+                if ('speechSynthesis' in window) {
+                    const silent = new SpeechSynthesisUtterance('');
+                    silent.volume = 0;
+                    window.speechSynthesis.speak(silent);
+                }
+                mediaUnlocked = true;
             }
         }
-        document.body.addEventListener('click', unlockAudio, { once: true });
-        document.body.addEventListener('touchstart', unlockAudio, { once: true });
+        document.body.addEventListener('click', unlockMedia, { once: true });
+        document.body.addEventListener('touchstart', unlockMedia, { once: true });
 
-        // === سیستم جدید تلفظ (با استفاده از Google Translate MP3) ===
+        // === موتور هوشمند هیبریدی تلفظ (ترکیب مرورگر + گوگل) ===
+        function playGoogleTTS(text, shortLangCode) {
+            // استفاده از لینک فوق‌العاده پایدار tw-ob گوگل که تحریم/مسدود نیست
+            const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${shortLangCode}&client=tw-ob&q=${encodeURIComponent(text)}`;
+            const player = document.getElementById('tts-player');
+            player.src = audioUrl;
+            player.load();
+            player.play().catch(e => console.warn("Google TTS Blocked:", e));
+        }
+
         function speakText(text, langId) {
-            if (!text) return;
-            try {
-                const langCode = LANGUAGES.find(l => l.id === langId).ttsCode;
-                // دریافت فایل صوتی از سرور گوگل به صورت آنی
-                const url = `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=${langCode}&q=${encodeURIComponent(text)}`;
+            if (!text || !state.ttsOn) return;
+            const langObj = LANGUAGES.find(l => l.id === langId);
+            
+            // تنظیم کد زبان برای استاندارد موبایل و ویندوز
+            let locale = langObj.ttsCode;
+            if(locale === 'fa') locale = 'fa-IR';
+            if(locale === 'en') locale = 'en-US';
+            if(locale === 'ru') locale = 'ru-RU';
+
+            // ابتدا تلاش برای استفاده از سیستم سریع داخلی دستگاه
+            if ('speechSynthesis' in window) {
+                const voices = window.speechSynthesis.getVoices();
+                const hasVoice = voices.some(v => v.lang.startsWith(locale) || v.lang.startsWith(langObj.ttsCode));
                 
-                const player = document.getElementById('tts-player');
-                player.src = url;
-                player.load();
-                
-                let playPromise = player.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.warn("پخش خودکار موبایل مسدود شد:", error);
-                    });
+                // اگر دستگاه زبان را نصب نداشت (مثل فارسی در خیلی از گوشی‌ها)، سریعا سوییچ به سرور گوگل
+                if (voices.length > 0 && !hasVoice) {
+                    playGoogleTTS(text, langObj.ttsCode);
+                    return;
                 }
-            } catch (e) {
-                console.error("خطای تلفظ: ", e);
+
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = locale;
+                utterance.rate = 0.9;
+                
+                utterance.onerror = () => playGoogleTTS(text, langObj.ttsCode); // در صورت خطا سوییچ به گوگل
+                window.speechSynthesis.speak(utterance);
+                
+                // بررسی هوشمند: اگر موبایل صدا را بی‌صدا مسدود کرد، سیستم تشخیص میدهد و گوگل را پخش میکند
+                setTimeout(() => {
+                    if (!window.speechSynthesis.speaking && voices.length > 0) {
+                        playGoogleTTS(text, langObj.ttsCode);
+                    }
+                }, 300);
+
+            } else {
+                // اگر کلا مرورگر پشتیبانی نمیکرد، سوییچ به گوگل
+                playGoogleTTS(text, langObj.ttsCode);
             }
         }
 
@@ -254,6 +289,9 @@
             updateStatsUI();
             document.getElementById('sound-toggle').innerText = state.soundOn ? "🔊 Sound: ON" : "🔇 Sound: OFF";
             document.getElementById('tts-toggle').innerText = state.ttsOn ? "🗣️ Voice Auto-Play: ON" : "🗣️ Voice Auto-Play: OFF";
+
+            // پر کردن لیست صداها در پس‌زمینه برای آماده بودن انجین داخلی
+            if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
 
             if (state.sourceLang !== null && state.targetLang !== null) {
                 await fetchDatabase(state.mode);
@@ -409,17 +447,22 @@
                 container.appendChild(btn);
             });
 
-            // اجرای تلفظ پس از ساخته شدن رابط کاربری
+            // اجرای تلفظ
             if (state.ttsOn) {
-                setTimeout(() => {
-                    speakText(currentRawTextForSpeech, state.sourceLang);
-                }, 100);
+                setTimeout(() => { speakText(currentRawTextForSpeech, state.sourceLang); }, 100);
             }
         }
 
         function checkAnswer(btn, selected, correct) {
             if(!canAnswer) return;
             canAnswer = false;
+
+            // زنده نگه داشتن موتور صوتی در موبایل هنگام کلیک کاربر
+            if ('speechSynthesis' in window) {
+                const silent = new SpeechSynthesisUtterance('');
+                silent.volume = 0;
+                window.speechSynthesis.speak(silent);
+            }
 
             const allBtns = document.querySelectorAll('.option-btn');
             allBtns.forEach(b => b.style.pointerEvents = 'none');
