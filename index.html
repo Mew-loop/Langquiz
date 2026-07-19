@@ -180,10 +180,34 @@
         let canAnswer = true;
         let currentRawTextForSpeech = ""; 
 
-        // --- باز کردن قفل رسانه برای موبایل با اولین تاچ ---
+        // متغیرهای سراسری سیستم صوتی
+        let audioCtx = null;
         let mediaUnlocked = false;
+
+        // بارگذاری دینامیک صداها
+        let availableVoices = [];
+        function updateVoices() {
+            if ('speechSynthesis' in window) {
+                availableVoices = window.speechSynthesis.getVoices();
+            }
+        }
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = updateVoices;
+            updateVoices();
+        }
+
+        // --- باز کردن قفل رسانه برای موبایل ---
         function unlockMedia() {
             if (!mediaUnlocked) {
+                // آنلاک کردن AudioContext (فقط یکبار در سطح کل برنامه)
+                if (!audioCtx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) audioCtx = new AudioContext();
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
                 // آنلاک کردن تگ Audio
                 const player = document.getElementById('tts-player');
                 player.play().catch(()=>{});
@@ -200,9 +224,8 @@
         document.body.addEventListener('click', unlockMedia, { once: true });
         document.body.addEventListener('touchstart', unlockMedia, { once: true });
 
-        // === موتور هوشمند هیبریدی تلفظ (ترکیب مرورگر + گوگل) ===
+        // === موتور هوشمند هیبریدی تلفظ ===
         function playGoogleTTS(text, shortLangCode) {
-            // استفاده از لینک فوق‌العاده پایدار tw-ob گوگل که تحریم/مسدود نیست
             const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${shortLangCode}&client=tw-ob&q=${encodeURIComponent(text)}`;
             const player = document.getElementById('tts-player');
             player.src = audioUrl;
@@ -214,18 +237,15 @@
             if (!text || !state.ttsOn) return;
             const langObj = LANGUAGES.find(l => l.id === langId);
             
-            // تنظیم کد زبان برای استاندارد موبایل و ویندوز
             let locale = langObj.ttsCode;
             if(locale === 'fa') locale = 'fa-IR';
             if(locale === 'en') locale = 'en-US';
             if(locale === 'ru') locale = 'ru-RU';
 
-            // ابتدا تلاش برای استفاده از سیستم سریع داخلی دستگاه
             if ('speechSynthesis' in window) {
-                const voices = window.speechSynthesis.getVoices();
+                const voices = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
                 const hasVoice = voices.some(v => v.lang.startsWith(locale) || v.lang.startsWith(langObj.ttsCode));
                 
-                // اگر دستگاه زبان را نصب نداشت (مثل فارسی در خیلی از گوشی‌ها)، سریعا سوییچ به سرور گوگل
                 if (voices.length > 0 && !hasVoice) {
                     playGoogleTTS(text, langObj.ttsCode);
                     return;
@@ -234,12 +254,36 @@
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = locale;
-                utterance.rate = 0.9;
                 
-                utterance.onerror = () => playGoogleTTS(text, langObj.ttsCode); // در صورت خطا سوییچ به گوگل
+                // جستجوی صدای با کیفیت و طبیعی
+                if (voices.length > 0) {
+                    let bestVoice = voices.find(v => 
+                        (v.lang.startsWith(locale) || v.lang.startsWith(langObj.ttsCode)) && 
+                        (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Online'))
+                    );
+                    
+                    if (!bestVoice) {
+                        bestVoice = voices.find(v => 
+                            (v.lang.startsWith(locale) || v.lang.startsWith(langObj.ttsCode)) && 
+                            (v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Natural'))
+                        );
+                    }
+                    
+                    if (!bestVoice) {
+                        bestVoice = voices.find(v => v.lang.startsWith(locale) || v.lang.startsWith(langObj.ttsCode));
+                    }
+
+                    if (bestVoice) {
+                        utterance.voice = bestVoice;
+                    }
+                }
+
+                utterance.rate = 1.0; 
+                utterance.pitch = 1.0; 
+                
+                utterance.onerror = () => playGoogleTTS(text, langObj.ttsCode);
                 window.speechSynthesis.speak(utterance);
                 
-                // بررسی هوشمند: اگر موبایل صدا را بی‌صدا مسدود کرد، سیستم تشخیص میدهد و گوگل را پخش میکند
                 setTimeout(() => {
                     if (!window.speechSynthesis.speaking && voices.length > 0) {
                         playGoogleTTS(text, langObj.ttsCode);
@@ -247,36 +291,39 @@
                 }, 300);
 
             } else {
-                // اگر کلا مرورگر پشتیبانی نمیکرد، سوییچ به گوگل
                 playGoogleTTS(text, langObj.ttsCode);
             }
         }
 
         function playSound(type) {
-            if (!state.soundOn) return;
+            if (!state.soundOn || !audioCtx) return;
+            // اگر معلق شده بود، دوباره بیدارش کن
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
             try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain); gain.connect(ctx.destination);
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
                 
+                const now = audioCtx.currentTime;
+
                 if (type === 'click') {
-                    osc.type = 'sine'; osc.frequency.setValueAtTime(300, ctx.currentTime);
-                    osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.04);
-                    gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
-                    osc.start(); osc.stop(ctx.currentTime + 0.04);
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.04);
+                    gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+                    osc.start(now); osc.stop(now + 0.04);
                 } else if (type === 'correct') {
-                    osc.type = 'triangle'; osc.frequency.setValueAtTime(400, ctx.currentTime);
-                    osc.frequency.setValueAtTime(600, ctx.currentTime + 0.1);
-                    gain.gain.setValueAtTime(0.2, ctx.currentTime); gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
-                    osc.start(); osc.stop(ctx.currentTime + 0.3);
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.setValueAtTime(600, now + 0.1);
+                    gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
+                    osc.start(now); osc.stop(now + 0.3);
                 } else if (type === 'wrong') {
-                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, ctx.currentTime);
-                    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.2);
-                    gain.gain.setValueAtTime(0.2, ctx.currentTime); gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
-                    osc.start(); osc.stop(ctx.currentTime + 0.2);
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.2);
+                    gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0, now + 0.2);
+                    osc.start(now); osc.stop(now + 0.2);
                 }
-            } catch (e) { }
+            } catch (e) { console.warn("Sound effect error:", e); }
         }
 
         function replayAudio() {
@@ -289,9 +336,6 @@
             updateStatsUI();
             document.getElementById('sound-toggle').innerText = state.soundOn ? "🔊 Sound: ON" : "🔇 Sound: OFF";
             document.getElementById('tts-toggle').innerText = state.ttsOn ? "🗣️ Voice Auto-Play: ON" : "🗣️ Voice Auto-Play: OFF";
-
-            // پر کردن لیست صداها در پس‌زمینه برای آماده بودن انجین داخلی
-            if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
 
             if (state.sourceLang !== null && state.targetLang !== null) {
                 await fetchDatabase(state.mode);
@@ -457,7 +501,6 @@
             if(!canAnswer) return;
             canAnswer = false;
 
-            // زنده نگه داشتن موتور صوتی در موبایل هنگام کلیک کاربر
             if ('speechSynthesis' in window) {
                 const silent = new SpeechSynthesisUtterance('');
                 silent.volume = 0;
