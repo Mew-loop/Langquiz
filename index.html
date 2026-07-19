@@ -23,15 +23,24 @@
 
         body { 
             background-color: var(--bg-dark); color: var(--text-main); 
-            height: 100vh; overflow: hidden; display: flex; justify-content: center; align-items: center; 
+            /* Fix for Mobile Viewport */
+            min-height: 100vh; 
+            min-height: var(--tg-viewport-height, 100vh); 
+            display: flex; justify-content: center; align-items: center; 
             background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #050505 70%);
+            overflow: hidden;
         }
 
-        .app-container { width: 100%; max-width: 420px; height: 100vh; max-height: 850px; display: flex; flex-direction: column; position: relative; padding: 20px; padding-bottom: 90px; }
+        .app-container { 
+            width: 100%; max-width: 420px; 
+            height: 100vh; 
+            height: var(--tg-viewport-height, 100vh); /* Sync with Telegram Mobile */
+            max-height: 850px; display: flex; flex-direction: column; position: relative; padding: 20px; padding-bottom: 90px; 
+        }
         .glass { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 24px; }
 
         /* Header */
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; margin-bottom: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; margin-bottom: 20px; flex-shrink: 0; }
         .stats-group { display: flex; gap: 20px; }
         .stat-item { display: flex; flex-direction: column; align-items: center; }
         .stat-val { font-size: 18px; font-weight: 700; }
@@ -49,7 +58,7 @@
         .lang-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
 
         /* Quiz UI */
-        .question-card { padding: 30px 20px; text-align: center; margin-bottom: 20px; position: relative; }
+        .question-card { padding: 30px 20px; text-align: center; margin-bottom: 20px; position: relative; flex-shrink: 0; }
         .question-label { font-size: 12px; color: var(--text-sec); margin-bottom: 15px; letter-spacing: 1px; text-transform: uppercase; }
         
         .word-wrapper { display: flex; flex-direction: column; align-items: center; gap: 15px; }
@@ -59,8 +68,8 @@
         .speaker-btn { background: rgba(10, 132, 255, 0.15); border: 1px solid var(--primary); color: var(--primary); width: 45px; height: 45px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; margin-top: 10px; }
         .speaker-btn:active { transform: scale(0.9); background: var(--primary); color: white; }
 
-        .options-grid { display: flex; flex-direction: column; gap: 12px; }
-        .option-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-main); padding: 18px 20px; border-radius: 18px; font-size: 17px; font-weight: 500; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .options-grid { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding-bottom: 20px; }
+        .option-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-main); padding: 18px 20px; border-radius: 18px; font-size: 17px; font-weight: 500; text-align: center; cursor: pointer; transition: all 0.3s; flex-shrink: 0; }
         .option-btn.correct { background: rgba(50, 215, 75, 0.15); border-color: var(--success); box-shadow: 0 0 20px rgba(50,215,75,0.2); transform: translateY(-3px); }
         .option-btn.wrong { background: rgba(255, 69, 58, 0.15); border-color: var(--danger); animation: shake 0.4s; }
 
@@ -139,9 +148,9 @@
     </div>
 
     <script>
+        // لینک گوگل اسکریپت خود را اینجا قرار دهید
         const API_URL = 'https://script.google.com/macros/s/AKfycbxaFlDv6NHyQBZS1B5r8yu_0qwxU74cPNvm4YpVaLenCXleOQIDcQelXCDYVlb9wuVQ/exec'; 
         
-        // زبان روسی با آیدی 8 اضافه شد
         const LANGUAGES = [
             { id: 0, name: "فارسی", emoji: "🇮🇷", ttsCode: "fa-IR" },
             { id: 1, name: "English", emoji: "🇬🇧", ttsCode: "en-GB" },
@@ -163,13 +172,27 @@
             targetLang: localStorage.getItem('targetLang') !== null ? parseInt(localStorage.getItem('targetLang')) : null,
             soundOn: localStorage.getItem('soundOn') !== 'false',
             ttsOn: localStorage.getItem('ttsOn') !== 'false',
-            mode: 'word' // حالت پیش‌فرض بازی
+            mode: 'word'
         };
 
         let wizardStep = 1;
         let currentWordIndex = -1;
         let canAnswer = true;
         let currentRawTextForSpeech = ""; 
+
+        // --- باز کردن قفل صدای iOS با اولین لمس صفحه ---
+        let ttsUnlocked = false;
+        function unlockTTS() {
+            if (!ttsUnlocked) {
+                try {
+                    const silentUtterance = new SpeechSynthesisUtterance('');
+                    window.speechSynthesis.speak(silentUtterance);
+                    ttsUnlocked = true;
+                } catch(e) {}
+            }
+        }
+        document.body.addEventListener('click', unlockTTS, { once: true });
+        document.body.addEventListener('touchstart', unlockTTS, { once: true });
 
         // === Audio & TTS System ===
         function playSound(type) {
@@ -196,15 +219,21 @@
                     gain.gain.setValueAtTime(0.2, ctx.currentTime); gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
                     osc.start(); osc.stop(ctx.currentTime + 0.2);
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.warn("Sound effect error:", e);
+            }
         }
 
         function speakText(text, langId) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = LANGUAGES.find(l => l.id === langId).ttsCode;
-            utterance.rate = 0.9;
-            window.speechSynthesis.speak(utterance);
+            try {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = LANGUAGES.find(l => l.id === langId).ttsCode;
+                utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            } catch (e) {
+                console.warn("TTS Blocked by mobile browser autoplay policy:", e);
+            }
         }
 
         function replayAudio() {
@@ -219,7 +248,6 @@
             document.getElementById('tts-toggle').innerText = state.ttsOn ? "🗣️ Voice Auto-Play: ON" : "🗣️ Voice Auto-Play: OFF";
 
             if (state.sourceLang !== null && state.targetLang !== null) {
-                // زبان‌ها قبلا انتخاب شده، مستقیما دیتا را می‌گیریم
                 await fetchDatabase(state.mode);
             } else {
                 startWizard();
@@ -236,7 +264,6 @@
 
             try {
                 if(API_URL.includes('script.google.com')) {
-                    // ارسال پارامتر mode به بک‌اند
                     const fetchUrl = `${API_URL}${API_URL.includes('?') ? '&' : '?'}mode=${mode}`;
                     const response = await fetch(fetchUrl);
                     const data = await response.json();
@@ -249,31 +276,28 @@
                         loadQuestion();
                         return true;
                     } else {
-                        showError(`تب دیتابیس برای ${mode} در گوگل شیت خالی است.`);
+                        showError(`دیتابیس گوگل شیت برای ${mode} خالی است.`);
                         return false;
                     }
                 } else {
-                    showError("لینک گوگل اسکریپت (API_URL) را در کد قرار نداده‌اید!");
+                    showError("لینک گوگل اسکریپت در کد قرار داده نشده است!");
                     return false;
                 }
             } catch (e) { 
-                showError("خطا در ارتباط با سرور. لطفا اینترنت را بررسی کنید.");
+                showError("خطا در ارتباط با سرور. لطفاً اینترنت خود را بررسی کنید.");
                 return false;
             }
         }
 
-        // --- Switch Game Mode (Bottom Nav) ---
-        async function switchMode(newMode) {
+        function switchMode(newMode) {
             if (state.mode === newMode) return;
             playSound('click');
             state.mode = newMode;
             
-            // Update UI
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('nav-' + newMode).classList.add('active');
             
-            // Fetch new data for the selected mode
-            await fetchDatabase(newMode);
+            fetchDatabase(newMode);
         }
 
         function showError(msg) {
@@ -282,7 +306,6 @@
             const errBox = document.getElementById('error-box');
             errBox.innerText = msg;
             errBox.style.display = 'block';
-            // Show nav so they can switch back if a tab is empty
             document.getElementById('bottom-nav').style.display = 'flex';
         }
 
@@ -338,7 +361,6 @@
             
             const row = dbMatrix[currentWordIndex];
             
-            // Text Processing
             let rawCorrectOpt = row[state.targetLang] || "N/A";
             let correctOpt = rawCorrectOpt.replace(/\*/g, ''); 
             
@@ -355,9 +377,7 @@
             document.getElementById('translation-direction').innerText = `${srcName} ➔ ${tgtName}`;
             document.getElementById('word-display').innerHTML = displayHTML;
 
-            if (state.ttsOn) speakText(currentRawTextForSpeech, state.sourceLang);
-
-            // Generate Options
+            // تغییر شماره 1: اول دکمه ها را در موبایل بساز تا اگر صدا ارور داد، دکمه ها لود شده باشند
             let wrongOpts = [];
             let attempts = 0;
             while(wrongOpts.length < 3 && attempts < 100) {
@@ -381,6 +401,13 @@
                 btn.onclick = () => checkAnswer(btn, opt, correctOpt);
                 container.appendChild(btn);
             });
+
+            // تغییر شماره 2: پخش صدا با کمی تاخیر و داخل try-catch تا UI به درستی قبل از آن رندر شود
+            if (state.ttsOn) {
+                setTimeout(() => {
+                    speakText(currentRawTextForSpeech, state.sourceLang);
+                }, 100);
+            }
         }
 
         function checkAnswer(btn, selected, correct) {
@@ -450,8 +477,10 @@
 
         window.onload = () => {
             const tg = window.Telegram.WebApp;
-            tg.ready(); tg.expand();
-            tg.setHeaderColor('#050505'); tg.setBackgroundColor('#050505');
+            tg.ready(); 
+            tg.expand(); // به شدت مهم برای نسخه موبایل
+            tg.setHeaderColor('#050505'); 
+            tg.setBackgroundColor('#050505');
             init();
         };
     </script>
