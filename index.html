@@ -3,611 +3,469 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MyLangQuiz Premium</title>
+    <title>LangQuiz Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* ==========================================
+           FLUID & GLASSMORPHISM THEME
+           ========================================== */
         :root {
-            --bg-dark: #050505;
-            --glass-bg: rgba(25, 25, 30, 0.6);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --primary: #0a84ff;
-            --success: #32d74b;
-            --danger: #ff453a;
-            --text-main: #ffffff;
-            --text-sec: #8e8e93;
-            --highlight: #ffd60a;
-            --gold: #ffd60a;
+            --bg-surface: rgba(20, 20, 22, 0.4);
+            --bg-surface-elevated: rgba(30, 30, 35, 0.5);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            
+            --accent-blue: #3b82f6;
+            --accent-green: rgba(46, 204, 113, 0.15);
+            --accent-green-border: rgba(46, 204, 113, 0.5);
+            --accent-green-text: #4ade80;
+            --accent-green-solid: #2ecc71;
+            
+            --accent-red: rgba(239, 68, 68, 0.15);
+            --accent-red-border: rgba(239, 68, 68, 0.5);
+            --accent-red-text: #f87171;
+            
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.5);
+            
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 10px;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif; -webkit-tap-highlight-color: transparent; }
+        * { 
+            box-sizing: border-box; margin: 0; padding: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Vazirmatn", sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+        }
 
         body { 
-            background-color: var(--bg-dark); color: var(--text-main); 
-            min-height: 100vh; 
-            min-height: var(--tg-viewport-height, 100vh); 
+            background: linear-gradient(-45deg, #090a0f, #111827, #0d131f, #0f0c1b);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: var(--text-primary); 
+            height: 100dvh; 
             display: flex; justify-content: center; align-items: center; 
-            background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #050505 70%);
             overflow: hidden;
         }
 
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
         .app-container { 
-            width: 100%; max-width: 420px; 
-            height: 100vh; 
-            height: var(--tg-viewport-height, 100vh); 
-            max-height: 850px; display: flex; flex-direction: column; position: relative; padding: 20px; padding-bottom: 90px; 
+            width: 100%; max-width: 440px; height: 100%; 
+            display: flex; flex-direction: column; position: relative; 
+            padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
         }
-        .glass { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 24px; }
 
-        /* Header */
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; margin-bottom: 8px; flex-shrink: 0; position: relative; }
-        .stats-group { display: flex; gap: 20px; }
-        .stat-item { display: flex; flex-direction: column; align-items: center; }
-        .stat-val { font-size: 18px; font-weight: 700; }
-        .stat-label { font-size: 11px; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1px; }
-        .settings-btn { font-size: 22px; background: none; border: none; color: var(--text-sec); cursor: pointer; }
+        .glass {
+            background: var(--bg-surface);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+        }
 
-        /* SR Progress Bar */
-        .sr-progress { display: flex; gap: 8px; margin-bottom: 16px; padding: 0 4px; flex-shrink: 0; }
-        .sr-pill { flex: 1; text-align: center; padding: 6px 4px; border-radius: 12px; font-size: 11px; font-weight: 600; background: rgba(255,255,255,0.05); color: var(--text-sec); border: 1px solid var(--glass-border); }
-        .sr-pill.new { background: rgba(10, 132, 255, 0.12); color: var(--primary); border-color: rgba(10,132,255,0.2); }
-        .sr-pill.due { background: rgba(255, 159, 10, 0.12); color: #ff9f0a; border-color: rgba(255,159,10,0.2); }
-        .sr-pill.mastered { background: rgba(50, 215, 75, 0.12); color: var(--success); border-color: rgba(50,215,75,0.2); }
+        /* ==========================================
+           HEADER & XP BAR
+           ========================================== */
+        .header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 20px 24px; flex-shrink: 0; z-index: 10;
+        }
+        .header-stats { display: flex; gap: 20px; align-items: center; }
+        
+        .stat-item { display: flex; flex-direction: column; gap: 2px; }
+        .stat-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; letter-spacing: 1px; }
+        
+        .xp-row { display: flex; align-items: center; gap: 8px; }
+        .stat-val { font-size: 16px; font-weight: 700; }
+        .mini-xp-bar { width: 50px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+        .mini-xp-fill { height: 100%; background: var(--text-primary); width: 0%; transition: width 0.4s ease; }
+        
+        .streak-fire { color: #ff9f0a; font-size: 14px; margin-right: 4px; }
+        
+        .header-actions { display: flex; gap: 8px; }
+        .icon-btn { 
+            width: 40px; height: 40px; border-radius: 50%; font-size: 16px; 
+            display: flex; justify-content: center; align-items: center; 
+            cursor: pointer; transition: 0.2s; color: var(--text-primary);
+        }
+        .icon-btn:active { transform: scale(0.9); background: var(--bg-surface-elevated); }
 
-        .screen { display: none; flex-direction: column; height: 100%; animation: fade 0.4s ease; overflow-y: auto;}
+        /* ==========================================
+           SCREENS & ANIMATIONS
+           ========================================== */
+        .screen { 
+            display: none; flex-direction: column; flex: 1; 
+            padding: 0 24px 100px 24px; overflow-y: auto; overflow-x: hidden;
+        }
         .screen.active { display: flex; }
-
-        /* Wizard */
-        .wizard-title { text-align: center; font-size: 22px; font-weight: 600; margin-bottom: 25px; }
-        .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; overflow-y: auto; padding-bottom: 20px; }
-        .lang-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 18px; padding: 20px 10px; color: var(--text-main); font-size: 16px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 10px; transition: all 0.2s; }
-        .lang-btn .emoji { font-size: 32px; }
-        .lang-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
-
-        /* Quiz UI */
-        .question-card { padding: 30px 20px; text-align: center; margin-bottom: 20px; position: relative; flex-shrink: 0; transition: border-color 0.3s; }
-        .question-card.new-word { border-color: rgba(10, 132, 255, 0.25); }
-        .question-card.mastered { border-color: rgba(255, 214, 10, 0.25); }
-        .question-label { font-size: 12px; color: var(--text-sec); margin-bottom: 15px; letter-spacing: 1px; text-transform: uppercase; }
-
-        .box-indicator {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            font-size: 10px;
-            font-weight: 700;
-            padding: 4px 10px;
-            border-radius: 10px;
-            background: rgba(255,255,255,0.08);
-            color: var(--text-sec);
-            letter-spacing: 0.5px;
-        }
-        .box-indicator.box-0 { background: rgba(10, 132, 255, 0.15); color: var(--primary); }
-        .box-indicator.box-1 { background: rgba(175, 82, 222, 0.15); color: #af52de; }
-        .box-indicator.box-2 { background: rgba(255, 159, 10, 0.15); color: #ff9f0a; }
-        .box-indicator.box-3 { background: rgba(255, 214, 10, 0.15); color: var(--gold); }
-        .box-indicator.box-4 { background: rgba(50, 215, 75, 0.15); color: var(--success); }
-        .box-indicator.box-5, .box-indicator.box-6 { background: rgba(255, 215, 0, 0.2); color: #ffd700; border: 1px solid rgba(255,215,0,0.3); }
-
-        .word-wrapper { display: flex; flex-direction: column; align-items: center; gap: 15px; }
-        .question-word { font-size: 28px; font-weight: 600; letter-spacing: -0.5px; line-height: 1.4; }
-        .highlight-word { color: var(--highlight); border-bottom: 2px dashed var(--highlight); padding-bottom: 2px; }
-
-        .speaker-btn { background: rgba(10, 132, 255, 0.15); border: 1px solid var(--primary); color: var(--primary); width: 45px; height: 45px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; margin-top: 10px; }
-        .speaker-btn:active { transform: scale(0.9); background: var(--primary); color: white; }
-        .speaker-btn.offline { border-color: var(--text-sec); color: var(--text-sec); background: rgba(142,142,147,0.15); }
-
-        .options-grid { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding-bottom: 20px; }
-        .option-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-main); padding: 18px 20px; border-radius: 18px; font-size: 17px; font-weight: 500; text-align: center; cursor: pointer; transition: all 0.3s; flex-shrink: 0; }
-        .option-btn.correct { background: rgba(50, 215, 75, 0.15); border-color: var(--success); box-shadow: 0 0 20px rgba(50,215,75,0.2); transform: translateY(-3px); }
-        .option-btn.wrong { background: rgba(255, 69, 58, 0.15); border-color: var(--danger); animation: shake 0.4s; }
-
-        /* SR Toast */
-        .sr-toast {
-            position: fixed;
-            top: 45%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.5);
-            padding: 16px 32px;
-            border-radius: 20px;
-            font-size: 20px;
-            font-weight: 700;
-            z-index: 300;
-            opacity: 0;
-            pointer-events: none;
-            white-space: nowrap;
-        }
-        .sr-toast.show {
-            animation: toastPop 0.6s ease forwards;
-        }
-        .sr-toast.level-up { background: rgba(50, 215, 75, 0.9); color: #000; }
-        .sr-toast.reset { background: rgba(255, 69, 58, 0.9); color: #fff; }
-        .sr-toast.new-master { background: linear-gradient(135deg, #ffd700, #ff9f0a); color: #000; }
-
-        @keyframes toastPop {
-            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-            40% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-        }
-        @keyframes toastOut {
-            to { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+        
+        /* Reusable animation class for triggers */
+        .animate-up {
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* Bottom Navigation */
-        .bottom-nav { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); display: none; padding: 8px; gap: 10px; z-index: 50; }
-        .nav-btn { flex: 1; padding: 14px; background: transparent; border: none; color: var(--text-sec); font-size: 15px; font-weight: 600; border-radius: 16px; cursor: pointer; transition: all 0.3s; display: flex; justify-content: center; align-items: center; gap: 8px; }
-        .nav-btn.active { background: rgba(255, 255, 255, 0.1); color: var(--text-main); box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .wizard-title { font-size: 28px; font-weight: 700; letter-spacing: -1px; margin: 40px 0 30px; }
+        .lang-grid { display: flex; flex-direction: column; gap: 12px; }
+        .lang-btn { 
+            padding: 20px; border-radius: var(--radius-md); 
+            color: var(--text-primary); font-size: 17px; font-weight: 500; 
+            display: flex; align-items: center; gap: 16px; 
+            cursor: pointer; transition: all 0.2s; text-align: left;
+        }
+        .lang-btn .emoji { font-size: 24px; }
+        .lang-btn:active { transform: scale(0.97); background: var(--bg-surface-elevated); }
 
-        /* Settings */
-        #settings-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 100; padding: 20px; animation: fade 0.3s; }
-        .modal-content { width: 100%; max-width: 350px; padding: 25px; display: flex; flex-direction: column; gap: 20px; }
-        .modal-btn { background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: white; padding: 15px; border-radius: 14px; font-size: 16px; cursor: pointer; }
-        .close-btn { background: var(--primary); border: none; color: white; padding: 15px; border-radius: 14px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .error-box { display: none; color: var(--danger); background: rgba(255, 69, 58, 0.1); border: 1px solid var(--danger); padding: 15px; border-radius: 12px; margin-top: 20px; font-size: 14px; }
-        .offline-badge { display: none; position: absolute; top: 12px; right: 12px; background: rgba(255, 159, 10, 0.15); color: #ff9f0a; border: 1px solid rgba(255,159,10,0.3); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        /* ==========================================
+           QUIZ INTERFACE
+           ========================================== */
+        .quiz-wrapper { 
+            flex: 1; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; gap: 50px;
+            position: relative;
+        }
+        
+        .inline-loader-container {
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+        .loader { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--text-primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        
+        .quiz-content { width: 100%; display: flex; flex-direction: column; gap: 50px; transition: opacity 0.3s; }
+        
+        .question-section { text-align: center; width: 100%; }
+        .direction-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; }
+        
+        .word-wrapper { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .question-word { 
+            font-size: 42px; font-weight: 800; letter-spacing: -1.5px; 
+            line-height: 1.2; margin: 0; color: var(--text-primary);
+            text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .highlight-word { color: var(--accent-blue); }
 
-        @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-6px);} 75% {transform: translateX(6px);} }
-        .loader { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
+        .speaker-btn { 
+            background: transparent; border: none; 
+            color: var(--text-secondary); font-size: 24px; 
+            cursor: pointer; transition: 0.2s;
+        }
+        .speaker-btn:active { transform: scale(0.8); color: var(--text-primary); }
+
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
+        .option-btn { 
+            color: var(--text-primary); padding: 24px 16px; 
+            border-radius: var(--radius-lg); font-size: 16px; font-weight: 500; 
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex; align-items: center; justify-content: center; text-align: center;
+            min-height: 80px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .option-btn:active { transform: scale(0.95); background: var(--bg-surface-elevated); }
+        
+        .option-btn.correct { 
+            background: var(--accent-green); border-color: var(--accent-green-border); 
+            color: var(--accent-green-text); font-weight: 600; transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(46, 204, 113, 0.1);
+        }
+        .option-btn.wrong { 
+            background: var(--accent-red); border-color: var(--accent-red-border); 
+            color: var(--accent-red-text); font-weight: 600; animation: shakeX 0.4s;
+        }
+
+        /* ==========================================
+           DASHBOARD & STATS
+           ========================================== */
+        .dash-header { font-size: 28px; font-weight: 700; letter-spacing: -1px; margin: 20px 0 30px; }
+        .dash-card { border-radius: var(--radius-lg); padding: 24px; margin-bottom: 16px; }
+        .dash-card h3 { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 24px; }
+        
+        .stats-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .stat-block { display: flex; flex-direction: column; gap: 4px; }
+        .stat-block .num { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
+        .stat-block .lbl { font-size: 11px; color: var(--text-secondary); }
+
+        .chart-canvas { width: 100%; height: 120px; }
+        
+        /* Activity Heatmap */
+        .activity-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .activity-day {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 10px; color: var(--text-secondary);
+            border: 1px solid rgba(255,255,255,0.02);
+        }
+        .activity-day.active {
+            background: var(--accent-green-solid);
+            color: #000; font-weight: bold;
+            box-shadow: 0 0 10px rgba(46, 204, 113, 0.4);
+            border: none;
+        }
+
+        /* ==========================================
+           BOTTOM NAVIGATION
+           ========================================== */
+        .bottom-nav { 
+            position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); 
+            padding: 8px; border-radius: 100px; display: none; gap: 8px; z-index: 50; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .nav-btn { 
+            width: 50px; height: 50px; background: transparent; border: none; 
+            color: var(--text-secondary); font-size: 20px; border-radius: 50%; 
+            cursor: pointer; transition: all 0.3s; display: flex; justify-content: center; align-items: center; 
+        }
+        .nav-btn.active { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+
+        /* ==========================================
+           MODALS & ANIMATIONS
+           ========================================== */
+        #settings-modal { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(15px); 
+            display: none; justify-content: center; align-items: center; z-index: 100; padding: 24px; 
+        }
+        .modal-content { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; }
+        .modal-btn { 
+            padding: 18px; border-radius: var(--radius-md); 
+            font-size: 15px; font-weight: 500; cursor: pointer; text-align: left; color: var(--text-primary);
+        }
+        .close-btn { 
+            background: var(--text-primary); color: #000; border: none; 
+            padding: 18px; border-radius: var(--radius-md); font-size: 15px; font-weight: 700; 
+            cursor: margin-top: 12px; text-align: center;
+        }
+
+        .error-box { display: none; color: var(--accent-red-text); background: rgba(239, 68, 68, 0.1); border: 1px solid var(--accent-red-border); padding: 16px; border-radius: var(--radius-sm); margin-top: 20px; font-size: 14px; text-align: center; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes shakeX { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-8px);} 75% {transform: translateX(8px);} }
     </style>
-<base target="_blank">
 </head>
 <body>
     <audio id="tts-player" style="display: none;"></audio>
-    <div class="sr-toast" id="sr-toast"></div>
-
+    
     <div class="app-container">
         <!-- Header -->
-        <div class="header glass" id="main-header" style="display: none;">
-            <div class="stats-group">
-                <div class="stat-item"><span class="stat-val" id="score-display">0</span><span class="stat-label">Score</span></div>
-                <div class="stat-item"><span class="stat-val" style="color: #ff9f0a;" id="streak-display">0 🔥</span><span class="stat-label">Streak</span></div>
+        <div class="header" id="main-header" style="display: none;">
+            <div class="header-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Level <span id="dash-level-header">1</span></span>
+                    <div class="xp-row">
+                        <span class="stat-val" id="score-display">0</span>
+                        <div class="mini-xp-bar"><div class="mini-xp-fill" id="xp-bar-fill"></div></div>
+                    </div>
+                </div>
+                <div class="stat-item" style="flex-direction: row; align-items: center;">
+                    <span class="streak-fire">🔥</span>
+                    <span class="stat-val" id="streak-display" style="font-size: 18px;">0</span>
+                </div>
             </div>
-            <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
-            <div class="offline-badge" id="offline-badge">📴 Offline</div>
+            <div class="header-actions">
+                <button class="icon-btn glass" onclick="toggleSettings()" title="Settings">⚙</button>
+            </div>
         </div>
 
-        <!-- SR Progress -->
-        <div class="sr-progress" id="sr-progress" style="display: none;">
-            <div class="sr-pill new" id="pill-new">🆕 New: 0</div>
-            <div class="sr-pill due" id="pill-due">📦 Due: 0</div>
-            <div class="sr-pill mastered" id="pill-mastered">✅ Mastered: 0</div>
-        </div>
-
-        <!-- 1. Loading -->
-        <div id="loading-screen" class="screen active" style="justify-content: center; text-align: center;">
-            <div class="loader" id="spinner"></div>
-            <h3 id="loading-text" style="color: var(--text-sec); font-weight: 500;">Connecting...</h3>
+        <!-- Full Page Loading -->
+        <div id="loading-screen" class="screen active animate-up" style="justify-content: center; align-items: center;">
+            <div class="loader"></div>
+            <h3 id="loading-text" style="color: var(--text-secondary); margin-top:16px; font-weight: 500; font-size: 14px;">Syncing data...</h3>
             <div id="error-box" class="error-box"></div>
         </div>
 
-        <!-- 2. Wizard Screen -->
-        <div id="wizard-screen" class="screen">
-            <h2 class="wizard-title" id="wizard-title">Select Source Language</h2>
+        <!-- Wizard Screen -->
+        <div id="wizard-screen" class="screen animate-up">
+            <h2 class="wizard-title" id="wizard-title">Select Language</h2>
             <div class="lang-grid" id="lang-grid"></div>
         </div>
 
-        <!-- 3. Quiz Screen -->
-        <div id="quiz-screen" class="screen">
-            <div class="question-card glass" id="question-card">
-                <div class="box-indicator" id="box-indicator">🆕 New</div>
-                <div class="question-label" id="translation-direction">...</div>
-                <div class="word-wrapper">
-                    <div class="question-word" id="word-display">...</div>
-                    <button class="speaker-btn" id="speaker-btn" onclick="replayAudio()">🔊</button>
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="screen animate-up">
+            <div class="quiz-wrapper">
+                <div class="inline-loader-container" id="inline-loader">
+                    <div class="loader"></div>
+                </div>
+
+                <div class="quiz-content" id="quiz-content">
+                    <div class="question-section">
+                        <div class="direction-label" id="translation-direction">ENG TO PER</div>
+                        <div class="word-wrapper">
+                            <h1 class="question-word" id="word-display">...</h1>
+                            <button class="speaker-btn" id="speaker-btn" onclick="replayAudio()">🔊</button>
+                        </div>
+                    </div>
+                    <div class="options-grid" id="options-container"></div>
                 </div>
             </div>
-            <div class="options-grid" id="options-container"></div>
+        </div>
+
+        <!-- Dashboard Screen -->
+        <div id="dashboard-screen" class="screen animate-up">
+            <h2 class="dash-header">Activity</h2>
+            
+            <div class="dash-card glass">
+                <h3>Overview</h3>
+                <div class="stats-row">
+                    <div class="stat-block"><span class="num" id="dash-level">1</span><span class="lbl">Current Level</span></div>
+                    <div class="stat-block"><span class="num" id="dash-xp">0</span><span class="lbl">Total XP</span></div>
+                    <div class="stat-block"><span class="num" id="dash-accuracy">0%</span><span class="lbl">Accuracy</span></div>
+                    <div class="stat-block"><span class="num" id="dash-best-streak">0</span><span class="lbl">Best Streak</span></div>
+                </div>
+            </div>
+
+            <div class="dash-card glass">
+                <h3>Weekly Usage</h3>
+                <canvas class="chart-canvas" id="weekly-chart"></canvas>
+            </div>
+            
+            <div class="dash-card glass" id="activity-heatmap-card">
+                <h3 id="month-title">This Month</h3>
+                <div class="activity-grid" id="activity-grid"></div>
+            </div>
         </div>
 
         <!-- Bottom Navigation -->
         <div class="bottom-nav glass" id="bottom-nav">
-            <button class="nav-btn active" id="nav-word" onclick="switchMode('word')">📝 Words</button>
-            <button class="nav-btn" id="nav-sentence" onclick="switchMode('sentence')">💬 Sentences</button>
+            <button class="nav-btn active" id="nav-word" onclick="switchMode('word')">📝</button>
+            <button class="nav-btn" id="nav-sentence" onclick="switchMode('sentence')">💬</button>
+            <div style="width: 1px; background: var(--border-subtle); margin: 6px 4px;"></div>
+            <button class="nav-btn" id="nav-toggle-btn" onclick="toggleNav()">📈</button>
         </div>
 
         <!-- Settings Modal -->
         <div id="settings-modal">
-            <div class="modal-content glass">
-                <h2 style="text-align: center; margin-bottom: 10px;">Settings</h2>
-                <button class="modal-btn" id="sound-toggle" onclick="toggleSound()">🔊 Sound: ON</button>
-                <button class="modal-btn" id="tts-toggle" onclick="toggleTTS()">🗣️ Voice Auto-Play: ON</button>
-                <button class="modal-btn" onclick="resetLanguages()">🌐 Change Languages</button>
-                <button class="modal-btn" style="background: rgba(255, 69, 58, 0.2); border-color: var(--danger);" onclick="resetScore()">🗑️ Reset Score</button>
-                <button class="close-btn" onclick="toggleSettings()">Close</button>
+            <div class="modal-content animate-up">
+                <button class="modal-btn glass" id="sound-toggle" onclick="toggleSound()">Sound Effects: ON</button>
+                <button class="modal-btn glass" id="tts-toggle" onclick="toggleTTS()">Pronunciation: ON</button>
+                <button class="modal-btn glass" onclick="resetLanguages()">Change Languages</button>
+                <button class="modal-btn glass" style="color: var(--accent-red-text);" onclick="resetScore()">Reset Progress</button>
+                <button class="close-btn" onclick="toggleSettings()">Done</button>
             </div>
         </div>
     </div>
 
     <script>
         const API_URL = 'https://script.google.com/macros/s/AKfycbxaFlDv6NHyQBZS1B5r8yu_0qwxU74cPNvm4YpVaLenCXleOQIDcQelXCDYVlb9wuVQ/exec'; 
-
         const LANGUAGES = [
             { id: 0, name: "فارسی", emoji: "🇮🇷", ttsCode: "fa" },
             { id: 1, name: "English", emoji: "🇬🇧", ttsCode: "en" },
-            { id: 2, name: "日本語", emoji: "🇯🇵", ttsCode: "ja" },
-            { id: 3, name: "中文", emoji: "🇨🇳", ttsCode: "zh-CN" },
-            { id: 4, name: "Deutsch", emoji: "🇩🇪", ttsCode: "de" },
-            { id: 5, name: "हिन्दी", emoji: "🇮🇳", ttsCode: "hi" },
-            { id: 6, name: "Español", emoji: "🇪🇸", ttsCode: "es" },
-            { id: 7, name: "العربية", emoji: "🇸🇦", ttsCode: "ar" },
-            { id: 8, name: "Русский", emoji: "🇷🇺", ttsCode: "ru" }
+            { id: 2, name: "Русский", emoji: "🇷🇺", ttsCode: "ru" }
         ];
-
-        // --- IndexedDB ---
-        const DB_NAME = 'LangQuizDB';
-        const DB_VERSION = 2;
-        let idb = null;
-
-        async function openIDB() {
-            return new Promise((resolve, reject) => {
-                const req = indexedDB.open(DB_NAME, DB_VERSION);
-                req.onerror = () => reject(req.error);
-                req.onsuccess = () => { idb = req.result; resolve(idb); };
-                req.onupgradeneeded = (e) => {
-                    const db = e.target.result;
-                    if (!db.objectStoreNames.contains('dataCache')) {
-                        db.createObjectStore('dataCache', { keyPath: 'key' });
-                    }
-                    if (!db.objectStoreNames.contains('wordStats')) {
-                        db.createObjectStore('wordStats', { keyPath: 'wordKey' });
-                    }
-                };
-            });
-        }
-
-        async function cacheData(key, data) {
-            if (!idb) await openIDB();
-            return new Promise((resolve, reject) => {
-                const tx = idb.transaction('dataCache', 'readwrite');
-                const store = tx.objectStore('dataCache');
-                const req = store.put({ key, data, timestamp: Date.now() });
-                req.onsuccess = () => resolve();
-                req.onerror = () => reject(req.error);
-            });
-        }
-
-        async function getCachedData(key) {
-            if (!idb) await openIDB();
-            return new Promise((resolve) => {
-                const tx = idb.transaction('dataCache', 'readonly');
-                const store = tx.objectStore('dataCache');
-                const req = store.get(key);
-                req.onsuccess = () => resolve(req.result || null);
-                req.onerror = () => resolve(null);
-            });
-        }
-
-        function getCacheKey(mode, src, tgt) {
-            return `${mode}_${src}_${tgt}`;
-        }
-
-        // --- Spaced Repetition (Leitner Box) ---
-        const SR_INTERVALS = [0, 5*60*1000, 60*60*1000, 24*60*60*1000, 3*24*60*60*1000, 7*24*60*60*1000, 30*24*60*60*1000];
-        const BOX_LABELS = ['🆕 New', '📦 Box 1', '📦 Box 2', '⭐ Box 3', '💎 Box 4', '👑 Box 5', '🏆 Mastered'];
-
-        async function getWordStats(wordKey) {
-            if (!idb) await openIDB();
-            return new Promise((resolve) => {
-                const tx = idb.transaction('wordStats', 'readonly');
-                const store = tx.objectStore('wordStats');
-                const req = store.get(wordKey);
-                req.onsuccess = () => resolve(req.result || null);
-                req.onerror = () => resolve(null);
-            });
-        }
-
-        async function saveWordStats(stats) {
-            if (!idb) await openIDB();
-            return new Promise((resolve, reject) => {
-                const tx = idb.transaction('wordStats', 'readwrite');
-                const store = tx.objectStore('wordStats');
-                const req = store.put(stats);
-                req.onsuccess = () => resolve();
-                req.onerror = () => reject(req.error);
-            });
-        }
-
-        function getWordKey(index) {
-            return `${state.mode}_${state.sourceLang}_${state.targetLang}_${index}`;
-        }
-
-        async function selectNextWordIndex() {
-            const now = Date.now();
-            const newWords = [];
-            const dueWords = [];
-
-            for (let i = 0; i < dbMatrix.length; i++) {
-                const key = getWordKey(i);
-                const stats = await getWordStats(key);
-                if (!stats) {
-                    newWords.push({index: i});
-                } else if (stats.nextReview <= now) {
-                    dueWords.push({index: i, box: stats.box});
-                }
-            }
-
-            if (newWords.length > 0) {
-                return newWords[Math.floor(Math.random() * newWords.length)].index;
-            }
-
-            if (dueWords.length > 0) {
-                dueWords.sort((a, b) => a.box - b.box);
-                const topN = Math.min(3, dueWords.length);
-                return dueWords[Math.floor(Math.random() * topN)].index;
-            }
-
-            return Math.floor(Math.random() * dbMatrix.length);
-        }
-
-        async function handleAnswerResult(isCorrect) {
-            const key = getWordKey(currentWordIndex);
-            let stats = await getWordStats(key) || {
-                wordKey: key,
-                box: 0,
-                lastReviewed: 0,
-                nextReview: 0,
-                correctCount: 0,
-                wrongCount: 0
-            };
-
-            stats.lastReviewed = Date.now();
-
-            if (isCorrect) {
-                stats.box = Math.min(stats.box + 1, 6);
-                stats.correctCount++;
-            } else {
-                stats.box = 0;
-                stats.wrongCount++;
-            }
-
-            const interval = SR_INTERVALS[stats.box];
-            stats.nextReview = Date.now() + interval;
-
-            await saveWordStats(stats);
-            return stats;
-        }
-
-        async function getSRCounts() {
-            let newCount = 0, dueCount = 0, masteredCount = 0;
-            const now = Date.now();
-            for (let i = 0; i < dbMatrix.length; i++) {
-                const key = getWordKey(i);
-                const stats = await getWordStats(key);
-                if (!stats) {
-                    newCount++;
-                } else if (stats.box >= 5) {
-                    masteredCount++;
-                } else if (stats.nextReview <= now) {
-                    dueCount++;
-                }
-            }
-            return { newCount, dueCount, masteredCount };
-        }
-
-        async function updateSRProgressUI() {
-            const counts = await getSRCounts();
-            document.getElementById('pill-new').innerText = `🆕 New: ${counts.newCount}`;
-            document.getElementById('pill-due').innerText = `📦 Due: ${counts.dueCount}`;
-            document.getElementById('pill-mastered').innerText = `✅ Mastered: ${counts.masteredCount}`;
-        }
-
-        function updateBoxIndicator(stats) {
-            const el = document.getElementById('box-indicator');
-            const card = document.getElementById('question-card');
-            if (!stats) {
-                el.innerText = BOX_LABELS[0];
-                el.className = 'box-indicator box-0';
-                card.className = 'question-card glass new-word';
-                return;
-            }
-            el.innerText = BOX_LABELS[Math.min(stats.box, 6)];
-            el.className = `box-indicator box-${Math.min(stats.box, 6)}`;
-            if (stats.box >= 5) {
-                card.className = 'question-card glass mastered';
-            } else {
-                card.className = 'question-card glass';
-            }
-        }
-
-        function showSRToast(isCorrect, newBox) {
-            const toast = document.getElementById('sr-toast');
-            toast.classList.remove('show', 'level-up', 'reset', 'new-master');
-
-            if (isCorrect && newBox === 6) {
-                toast.innerText = '🏆 Mastered!';
-                toast.className = 'sr-toast new-master show';
-            } else if (isCorrect) {
-                toast.innerText = `📈 Level ${newBox}!`;
-                toast.className = 'sr-toast level-up show';
-            } else {
-                toast.innerText = '↩️ Back to Box 0';
-                toast.className = 'sr-toast reset show';
-            }
-
-            setTimeout(() => {
-                toast.style.animation = 'toastOut 0.3s ease forwards';
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                    toast.style.animation = '';
-                }, 300);
-            }, 1200);
-        }
+        
+        const XP_BASE = 10;
+        const XP_PENALTY = 5;
+        const LEVEL_THRESHOLDS = [0, 500, 1200, 2500, 4500, 7000, 10000];
 
         let dbMatrix = [];
-        let isOffline = false;
-
-        let state = {
-            score: parseInt(localStorage.getItem('userScore')) || 0,
-            streak: parseInt(localStorage.getItem('userStreak')) || 0,
-            sourceLang: localStorage.getItem('sourceLang') !== null ? parseInt(localStorage.getItem('sourceLang')) : null,
-            targetLang: localStorage.getItem('targetLang') !== null ? parseInt(localStorage.getItem('targetLang')) : null,
-            soundOn: localStorage.getItem('soundOn') !== 'false',
-            ttsOn: localStorage.getItem('ttsOn') !== 'false',
-            mode: 'word'
-        };
-
+        let currentScreen = 'quiz';
         let wizardStep = 1;
         let currentWordIndex = -1;
         let canAnswer = true;
-        let currentRawTextForSpeech = ""; 
+        let currentRawTextForSpeech = "";
+        
+        // Web Audio Context (For synthesized sound effects)
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let sfxCtx = null;
 
-        let audioCtx = null;
-        let mediaUnlocked = false;
-
-        let availableVoices = [];
-        function updateVoices() {
-            if ('speechSynthesis' in window) {
-                availableVoices = window.speechSynthesis.getVoices();
+        function loadState() {
+            const defaults = { score: 0, streak: 0, bestStreak: 0, sourceLang: null, targetLang: null, soundOn: true, ttsOn: true, mode: 'word', totalCorrect: 0, totalWrong: 0, usageData: {} };
+            const s = {};
+            for (const k in defaults) {
+                const v = localStorage.getItem(k);
+                if (v !== null) { try { s[k] = JSON.parse(v); } catch { s[k] = v; } }
+                else s[k] = defaults[k];
             }
+            s.score = parseInt(s.score) || 0;
+            s.streak = parseInt(s.streak) || 0;
+            if(!s.usageData) s.usageData = {};
+            return s;
         }
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = updateVoices;
-            updateVoices();
-        }
+        let state = loadState();
 
-        function unlockMedia() {
-            if (!mediaUnlocked) {
-                if (!audioCtx) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    if (AudioContext) audioCtx = new AudioContext();
-                }
-                if (audioCtx && audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-                const player = document.getElementById('tts-player');
-                player.play().catch(()=>{});
-                if ('speechSynthesis' in window) {
-                    const silent = new SpeechSynthesisUtterance('');
-                    silent.volume = 0;
-                    window.speechSynthesis.speak(silent);
-                }
-                mediaUnlocked = true;
+        function getLevel(xp) {
+            for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+                if (xp >= LEVEL_THRESHOLDS[i]) return i + 1;
             }
-        }
-        document.body.addEventListener('click', unlockMedia, { once: true });
-        document.body.addEventListener('touchstart', unlockMedia, { once: true });
-
-        function playGoogleTTS(text, shortLangCode) {
-            const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${shortLangCode}&client=tw-ob&q=${encodeURIComponent(text)}`;
-            const player = document.getElementById('tts-player');
-            player.src = audioUrl;
-            player.load();
-            player.play().catch(e => {
-                console.warn("Google TTS Blocked:", e);
-                const btn = document.getElementById('speaker-btn');
-                if (btn) {
-                    btn.style.transform = 'scale(1.2)';
-                    setTimeout(() => btn.style.transform = '', 200);
-                }
-            });
+            return 1;
         }
 
-        function speakText(text, langId) {
-            if (!text || !state.ttsOn) return;
-            const langObj = LANGUAGES.find(l => l.id === langId);
-
-            let locale = langObj.ttsCode;
-            if(locale === 'fa') locale = 'fa-IR';
-            if(locale === 'en') locale = 'en-US';
-            if(locale === 'ru') locale = 'ru-RU';
-
-            if ('speechSynthesis' in window) {
-                const voices = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
-                const hasVoice = voices.some(v => v.lang.startsWith(locale) || v.lang.startsWith(langObj.ttsCode));
-
-                if (voices.length > 0 && !hasVoice) {
-                    playGoogleTTS(text, langObj.ttsCode);
-                    return;
-                }
-
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = locale;
-
-                if (voices.length > 0) {
-                    let bestVoice = voices.find(v => 
-                        (v.lang.startsWith(locale) || v.lang.startsWith(langObj.ttsCode)) && 
-                        (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Online'))
-                    );
-                    if (!bestVoice) {
-                        bestVoice = voices.find(v => 
-                            (v.lang.startsWith(locale) || v.lang.startsWith(langObj.ttsCode)) && 
-                            (v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Natural'))
-                        );
-                    }
-                    if (!bestVoice) {
-                        bestVoice = voices.find(v => v.lang.startsWith(locale) || v.lang.startsWith(langObj.ttsCode));
-                    }
-                    if (bestVoice) utterance.voice = bestVoice;
-                }
-
-                utterance.rate = 1.0; 
-                utterance.pitch = 1.0; 
-                utterance.onerror = () => playGoogleTTS(text, langObj.ttsCode);
-                window.speechSynthesis.speak(utterance);
-
-                setTimeout(() => {
-                    if (!window.speechSynthesis.speaking && voices.length > 0) {
-                        playGoogleTTS(text, langObj.ttsCode);
-                    }
-                }, 300);
-            } else {
-                playGoogleTTS(text, langObj.ttsCode);
+        // ---------- Sound Effects System ----------
+        function playSfx(type) {
+            if (!state.soundOn) return;
+            if (!sfxCtx) sfxCtx = new AudioContext();
+            if (sfxCtx.state === 'suspended') sfxCtx.resume();
+            
+            const osc = sfxCtx.createOscillator();
+            const gain = sfxCtx.createGain();
+            osc.connect(gain);
+            gain.connect(sfxCtx.destination);
+            
+            const now = sfxCtx.currentTime;
+            
+            if (type === 'correct') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(500, now);
+                osc.frequency.exponentialRampToValueAtTime(1000, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
             }
         }
 
-        function playSound(type) {
-            if (!state.soundOn || !audioCtx) return;
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            try {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                const now = audioCtx.currentTime;
-                if (type === 'click') {
-                    osc.type = 'sine'; osc.frequency.setValueAtTime(300, now);
-                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.04);
-                    gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-                    osc.start(now); osc.stop(now + 0.04);
-                } else if (type === 'correct') {
-                    osc.type = 'triangle'; osc.frequency.setValueAtTime(400, now);
-                    osc.frequency.setValueAtTime(600, now + 0.1);
-                    gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
-                    osc.start(now); osc.stop(now + 0.3);
-                } else if (type === 'wrong') {
-                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now);
-                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.2);
-                    gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0, now + 0.2);
-                    osc.start(now); osc.stop(now + 0.2);
-                }
-            } catch (e) { console.warn("Sound effect error:", e); }
+        // ---------- UI Update & Rendering ----------
+        function updateXPUI() {
+            const level = getLevel(state.score);
+            const prev = LEVEL_THRESHOLDS[Math.max(0, level - 1)];
+            const next = LEVEL_THRESHOLDS[Math.min(level, LEVEL_THRESHOLDS.length - 1)] || prev + 1000;
+            const pct = Math.min(100, Math.max(0, ((state.score - prev) / (next - prev)) * 100));
+            
+            document.getElementById('score-display').innerText = state.score;
+            document.getElementById('dash-level-header').innerText = level;
+            document.getElementById('streak-display').innerText = state.streak;
+            document.getElementById('xp-bar-fill').style.width = pct + '%';
         }
 
-        function replayAudio() {
-            playSound('click');
-            if (currentRawTextForSpeech) speakText(currentRawTextForSpeech, state.sourceLang);
-        }
-
-        function updateOnlineStatus() {
-            isOffline = !navigator.onLine;
-            const badge = document.getElementById('offline-badge');
-            if (badge) badge.style.display = isOffline ? 'block' : 'none';
-            const speakerBtn = document.getElementById('speaker-btn');
-            if (speakerBtn) {
-                if (isOffline) speakerBtn.classList.add('offline');
-                else speakerBtn.classList.remove('offline');
+        function saveState() {
+            for (const k in state) {
+                localStorage.setItem(k, typeof state[k] === 'object' ? JSON.stringify(state[k]) : state[k]);
             }
         }
-        window.addEventListener('online', updateOnlineStatus);
-        window.addEventListener('offline', updateOnlineStatus);
+
+        function trackUsage() {
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
+            const dayKey = now.getDate();
+            if(!state.usageData[monthKey]) state.usageData[monthKey] = [];
+            if(!state.usageData[monthKey].includes(dayKey)) {
+                state.usageData[monthKey].push(dayKey);
+                saveState();
+            }
+        }
 
         async function init() {
-            updateOnlineStatus();
-            updateStatsUI();
-            document.getElementById('sound-toggle').innerText = state.soundOn ? "🔊 Sound: ON" : "🔇 Sound: OFF";
-            document.getElementById('tts-toggle').innerText = state.ttsOn ? "🗣️ Voice Auto-Play: ON" : "🗣️ Voice Auto-Play: OFF";
-
+            updateXPUI();
+            trackUsage();
+            document.getElementById('sound-toggle').innerText = state.soundOn ? "Sound Effects: ON" : "Sound Effects: OFF";
+            document.getElementById('tts-toggle').innerText = state.ttsOn ? "Pronunciation: ON" : "Pronunciation: OFF";
+            
             if (state.sourceLang !== null && state.targetLang !== null) {
                 await fetchDatabase(state.mode);
             } else {
@@ -616,86 +474,108 @@
         }
 
         async function fetchDatabase(mode) {
-            document.getElementById('loading-text').innerText = `Loading ${mode === 'word' ? 'Words' : 'Sentences'}...`;
-            document.getElementById('spinner').style.display = 'block';
-            document.getElementById('error-box').style.display = 'none';
-            showScreen('loading-screen');
-            document.getElementById('bottom-nav').style.display = 'none';
-            document.getElementById('main-header').style.display = 'none';
-            document.getElementById('sr-progress').style.display = 'none';
-
-            const cacheKey = getCacheKey(mode, state.sourceLang, state.targetLang);
-            let loadedFromCache = false;
+            const isInitialized = dbMatrix.length > 0;
+            
+            if (isInitialized) {
+                document.getElementById('quiz-content').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('quiz-content').style.display = 'none';
+                    document.getElementById('inline-loader').style.display = 'flex';
+                }, 300);
+            } else {
+                showScreen('loading-screen');
+                document.getElementById('bottom-nav').style.display = 'none';
+                document.getElementById('main-header').style.display = 'none';
+            }
 
             try {
-                const cached = await getCachedData(cacheKey);
-                if (cached && cached.data && cached.data.length > 0) {
-                    dbMatrix = cached.data;
-                    loadedFromCache = true;
-                    document.getElementById('loading-text').innerText = 'Loading from cache...';
+                const response = await fetch(`${API_URL}${API_URL.includes('?') ? '&' : '?'}mode=${mode}`);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    dbMatrix = data;
                 }
-            } catch(e) { console.warn('Cache read failed', e); }
-
-            let networkSuccess = false;
-            if (navigator.onLine && API_URL.includes('script.google.com')) {
-                try {
-                    const fetchUrl = `${API_URL}${API_URL.includes('?') ? '&' : '?'}mode=${mode}`;
-                    const response = await fetch(fetchUrl);
-                    const data = await response.json();
-                    if (data && data.length > 0) {
-                        dbMatrix = data;
-                        networkSuccess = true;
-                        try { await cacheData(cacheKey, data); } catch(e) { console.warn('Cache write failed', e); }
-                    }
-                } catch (e) { console.warn('Network fetch failed', e); }
-            }
+            } catch (e) { console.warn("Fetch Error", e); }
 
             if (dbMatrix.length > 0) {
                 document.getElementById('main-header').style.display = 'flex';
                 document.getElementById('bottom-nav').style.display = 'flex';
-                document.getElementById('sr-progress').style.display = 'flex';
+                currentScreen = 'quiz';
+                
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById('nav-' + mode).classList.add('active');
+                
                 showScreen('quiz-screen');
-                await updateSRProgressUI();
                 await loadQuestion();
-                return true;
+
+                document.getElementById('inline-loader').style.display = 'none';
+                document.getElementById('quiz-content').style.display = 'flex';
+                setTimeout(() => document.getElementById('quiz-content').style.opacity = '1', 50);
+                
             } else {
-                let msg = "دیتابیس گوگل شیت خالی است یا در دسترس نیست.";
-                if (isOffline) msg = "شما آفلاین هستید و داده‌ای در حافظه پنهان نیست. لطفاً یک‌بار آنلاین شوید.";
-                else if (!API_URL.includes('script.google.com')) msg = "لینک گوگل اسکریپت در کد قرار داده نشده است!";
-                showError(msg);
-                return false;
+                document.getElementById('loading-text').style.display = 'none';
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('error-box').innerText = "خطا در دریافت اطلاعات.";
+                document.getElementById('error-box').style.display = 'block';
             }
         }
 
+        // ---------- Trigger Animation ----------
+        function triggerAnimation(elementId) {
+            const el = document.getElementById(elementId);
+            if(el) {
+                el.classList.remove('animate-up');
+                void el.offsetWidth; // trigger reflow
+                el.classList.add('animate-up');
+            }
+        }
+
+        // ---------- Navigation & Wizard ----------
         function switchMode(newMode) {
-            if (state.mode === newMode) return;
-            playSound('click');
+            if (state.mode === newMode && currentScreen === 'quiz') return;
             state.mode = newMode;
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('nav-' + newMode).classList.add('active');
+            if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+                window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            }
+            
+            if(currentScreen !== 'quiz') { 
+                showScreen('quiz-screen'); 
+            } else {
+                // Apply animation when clicking bottom nav to switch mode
+                triggerAnimation('quiz-wrapper');
+            }
+            
             fetchDatabase(newMode);
         }
 
-        function showError(msg) {
-            document.getElementById('spinner').style.display = 'none';
-            document.getElementById('loading-text').style.display = 'none';
-            const errBox = document.getElementById('error-box');
-            errBox.innerText = msg;
-            errBox.style.display = 'block';
-            document.getElementById('bottom-nav').style.display = 'flex';
+        function toggleNav() {
+            if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            if (currentScreen === 'dashboard') {
+                currentScreen = 'quiz';
+                document.getElementById('nav-' + state.mode).classList.add('active');
+                showScreen('quiz-screen');
+                triggerAnimation('quiz-wrapper');
+            } else {
+                currentScreen = 'dashboard';
+                document.getElementById('nav-toggle-btn').classList.add('active');
+                showScreen('dashboard-screen');
+                triggerAnimation('dashboard-screen');
+                renderDashboard();
+            }
         }
 
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
+            const s = document.getElementById(id);
+            s.classList.add('active');
+            s.classList.add('animate-up');
         }
 
         function startWizard() {
             document.getElementById('main-header').style.display = 'none';
             document.getElementById('bottom-nav').style.display = 'none';
-            document.getElementById('sr-progress').style.display = 'none';
             wizardStep = 1;
-            document.getElementById('wizard-title').innerText = "Step 1: Question Language";
+            document.getElementById('wizard-title').innerText = "Language to learn";
             renderLangButtons();
             showScreen('wizard-screen');
         }
@@ -705,9 +585,9 @@
             grid.innerHTML = '';
             LANGUAGES.forEach(lang => {
                 if (wizardStep === 1 && lang.id === 0) return;
-                if (wizardStep === 2 && lang.id === state.sourceLang) return; 
-                const btn = document.createElement('button');
-                btn.className = 'lang-btn';
+                if (wizardStep === 2 && lang.id === state.sourceLang) return;
+                const btn = document.createElement('div');
+                btn.className = 'lang-btn glass';
                 btn.innerHTML = `<span class="emoji">${lang.emoji}</span><span>${lang.name}</span>`;
                 btn.onclick = () => handleLangSelect(lang.id);
                 grid.appendChild(btn);
@@ -715,10 +595,10 @@
         }
 
         async function handleLangSelect(id) {
-            playSound('click');
             if (wizardStep === 1) {
                 state.sourceLang = id; wizardStep = 2;
-                document.getElementById('wizard-title').innerText = "Step 2: Answer Language";
+                document.getElementById('wizard-title').innerText = "Your native language";
+                triggerAnimation('wizard-screen');
                 renderLangButtons();
             } else {
                 state.targetLang = id; saveState();
@@ -726,162 +606,210 @@
             }
         }
 
+        // ---------- Quiz Logic ----------
         async function loadQuestion() {
-            if(dbMatrix.length === 0) return;
+            if (dbMatrix.length === 0) return;
             canAnswer = true;
-
-            currentWordIndex = await selectNextWordIndex();
-            const stats = await getWordStats(getWordKey(currentWordIndex));
-            updateBoxIndicator(stats);
-
+            currentWordIndex = Math.floor(Math.random() * dbMatrix.length);
             const row = dbMatrix[currentWordIndex];
-
-            let rawCorrectOpt = row[state.targetLang] || "N/A";
-            let correctOpt = rawCorrectOpt.replace(/\*/g, ''); 
-
+            
+            let correctOpt = (row[state.targetLang] || "N/A").replace(/\*/g, '');
             let questionWord = row[state.sourceLang] || "N/A";
             currentRawTextForSpeech = questionWord.replace(/\*/g, '');
-
-            let displayHTML = questionWord;
-            if (displayHTML.includes('*')) {
-                displayHTML = displayHTML.replace(/\*(.*?)\*/g, '<span class="highlight-word">$1</span>');
-            }
-
+            
             const srcName = LANGUAGES.find(l => l.id === state.sourceLang).name;
             const tgtName = LANGUAGES.find(l => l.id === state.targetLang).name;
-            document.getElementById('translation-direction').innerText = `${srcName} ➔ ${tgtName}`;
+            document.getElementById('translation-direction').innerText = `${srcName} → ${tgtName}`;
+            
+            let displayHTML = questionWord;
+            if (displayHTML.includes('*')) displayHTML = displayHTML.replace(/\*(.*?)\*/g, '<span class="highlight-word">$1</span>');
             document.getElementById('word-display').innerHTML = displayHTML;
-
+            
             let wrongOpts = [];
-            let attempts = 0;
-            while(wrongOpts.length < 3 && attempts < 100) {
-                let rRow = dbMatrix[Math.floor(Math.random() * dbMatrix.length)];
-                let wOpt = (rRow[state.targetLang] || "").replace(/\*/g, '');
-                if (wOpt && wOpt !== correctOpt && !wrongOpts.includes(wOpt)) {
-                    wrongOpts.push(wOpt);
-                }
-                attempts++;
+            while (wrongOpts.length < 3) {
+                let r = Math.floor(Math.random() * dbMatrix.length);
+                let wOpt = (dbMatrix[r][state.targetLang] || "").replace(/\*/g, '');
+                if (wOpt !== correctOpt && !wrongOpts.includes(wOpt)) wrongOpts.push(wOpt);
             }
-            while(wrongOpts.length < 3) wrongOpts.push("---");
-
             let allOpts = [correctOpt, ...wrongOpts].sort(() => Math.random() - 0.5);
-
+            
             const container = document.getElementById('options-container');
             container.innerHTML = '';
             allOpts.forEach(opt => {
                 const btn = document.createElement('button');
-                btn.className = 'option-btn';
+                btn.className = 'option-btn glass';
                 btn.innerText = opt;
                 btn.onclick = () => checkAnswer(btn, opt, correctOpt);
                 container.appendChild(btn);
             });
 
-            if (state.ttsOn) {
-                setTimeout(() => { speakText(currentRawTextForSpeech, state.sourceLang); }, 100);
+            if(state.ttsOn) {
+                const shortLang = LANGUAGES.find(l => l.id === state.sourceLang).ttsCode;
+                setTimeout(() => playGoogleTTS(currentRawTextForSpeech, shortLang), 300);
             }
         }
 
-        async function checkAnswer(btn, selected, correct) {
-            if(!canAnswer) return;
+        function checkAnswer(btn, selected, correct) {
+            if (!canAnswer) return;
             canAnswer = false;
-
-            if ('speechSynthesis' in window) {
-                const silent = new SpeechSynthesisUtterance('');
-                silent.volume = 0;
-                window.speechSynthesis.speak(silent);
-            }
-
-            const allBtns = document.querySelectorAll('.option-btn');
-            allBtns.forEach(b => b.style.pointerEvents = 'none');
-
+            
             const isCorrect = selected === correct;
+            const haptic = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback;
 
-            if(isCorrect) {
-                playSound('correct');
+            if (isCorrect) {
+                if(haptic) haptic.notificationOccurred('success');
+                playSfx('correct');
                 btn.classList.add('correct');
-                state.score += 100; state.streak += 1;
+                state.streak++;
+                if (state.streak > state.bestStreak) state.bestStreak = state.streak;
+                state.totalCorrect++;
+                state.score += XP_BASE;
             } else {
-                playSound('wrong');
+                if(haptic) haptic.notificationOccurred('error');
+                playSfx('wrong');
                 btn.classList.add('wrong');
                 state.streak = 0;
-                allBtns.forEach(b => { if(b.innerText === correct) b.classList.add('correct'); });
+                state.totalWrong++;
+                state.score = Math.max(0, state.score - XP_PENALTY);
             }
-
-            const newStats = await handleAnswerResult(isCorrect);
-            showSRToast(isCorrect, newStats.box);
-            await updateSRProgressUI();
-
-            saveState(); updateStatsUI();
-            setTimeout(() => { loadQuestion(); }, 1600);
+            
+            saveState();
+            updateXPUI();
+            setTimeout(() => loadQuestion(), 1000);
         }
 
-        function updateStatsUI() {
-            document.getElementById('score-display').innerText = state.score;
-            document.getElementById('streak-display').innerText = state.streak + " 🔥";
+        function playGoogleTTS(text, shortLangCode) {
+            const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${shortLangCode}&client=tw-ob&q=${encodeURIComponent(text)}`;
+            const player = document.getElementById('tts-player');
+            player.src = audioUrl;
+            player.play().catch(e => console.warn(e));
         }
 
-        function saveState() {
-            localStorage.setItem('userScore', state.score);
-            localStorage.setItem('userStreak', state.streak);
-            if(state.sourceLang !== null) localStorage.setItem('sourceLang', state.sourceLang);
-            if(state.targetLang !== null) localStorage.setItem('targetLang', state.targetLang);
-            localStorage.setItem('soundOn', state.soundOn);
-            localStorage.setItem('ttsOn', state.ttsOn);
+        function replayAudio() {
+            const shortLang = LANGUAGES.find(l => l.id === state.sourceLang).ttsCode;
+            playGoogleTTS(currentRawTextForSpeech, shortLang);
         }
 
+        // ---------- Dashboard & Charts ----------
+        function renderDashboard() {
+            document.getElementById('dash-level').innerText = getLevel(state.score);
+            document.getElementById('dash-xp').innerText = state.score;
+            document.getElementById('dash-best-streak').innerText = state.bestStreak;
+            
+            const total = state.totalCorrect + state.totalWrong;
+            document.getElementById('dash-accuracy').innerText = total > 0 ? Math.round((state.totalCorrect / total) * 100) + '%' : '0%';
+            
+            drawWeeklyChart();
+            renderActivityHeatmap();
+        }
+
+        function drawWeeklyChart() {
+            const canvas = document.getElementById('weekly-chart');
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            const w = rect.width, h = rect.height;
+            ctx.clearRect(0, 0, w, h);
+            
+            const now = new Date();
+            const weeklyValues = [];
+            const labels = [];
+            
+            const daysArr = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+            
+            for (let i = 6; i >= 0; i--) {
+                let d = new Date();
+                d.setDate(now.getDate() - i);
+                let mKey = `${d.getFullYear()}-${d.getMonth()}`;
+                
+                let wasActive = (state.usageData[mKey] && state.usageData[mKey].includes(d.getDate())) ? 1 : 0;
+                
+                // Add tiny visual bar for empty days just to show structure, full bar if active
+                weeklyValues.push(wasActive ? 10 : 1);
+                labels.push(daysArr[d.getDay()]);
+            }
+            
+            const barW = (w - (weeklyValues.length * 8)) / weeklyValues.length;
+            const maxVal = 10;
+            
+            weeklyValues.forEach((val, i) => {
+                const barH = (val / maxVal) * (h - 25);
+                const x = 5 + i * (barW + 8);
+                const y = h - 20 - barH;
+                
+                ctx.fillStyle = val > 1 ? 'rgba(59, 130, 246, 0.8)' : 'rgba(255, 255, 255, 0.1)';
+                ctx.beginPath();
+                if(ctx.roundRect) ctx.roundRect(x, y, barW, barH > 0 ? barH : 4, [4, 4, 4, 4]);
+                else ctx.rect(x, y, barW, barH > 0 ? barH : 4);
+                ctx.fill();
+                
+                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(labels[i], x + barW/2, h - 5);
+            });
+        }
+
+        function renderActivityHeatmap() {
+            const grid = document.getElementById('activity-grid');
+            grid.innerHTML = '';
+            
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('month-title').innerText = `${monthNames[month]} Activity`;
+            
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const mKey = `${year}-${month}`;
+            const activeDays = state.usageData[mKey] || [];
+            
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'activity-day';
+                dayEl.innerText = i;
+                
+                if (activeDays.includes(i)) {
+                    dayEl.classList.add('active');
+                }
+                grid.appendChild(dayEl);
+            }
+        }
+
+        // ---------- Settings ----------
         function toggleSettings() {
-            playSound('click');
             const modal = document.getElementById('settings-modal');
             modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
         }
-
         function toggleSound() {
-            state.soundOn = !state.soundOn; saveState(); playSound('click');
-            document.getElementById('sound-toggle').innerText = state.soundOn ? "🔊 Sound: ON" : "🔇 Sound: OFF";
+            state.soundOn = !state.soundOn; saveState();
+            document.getElementById('sound-toggle').innerText = state.soundOn ? "Sound Effects: ON" : "Sound Effects: OFF";
         }
-
         function toggleTTS() {
-            state.ttsOn = !state.ttsOn; saveState(); playSound('click');
-            document.getElementById('tts-toggle').innerText = state.ttsOn ? "🗣️ Voice Auto-Play: ON" : "🗣️ Voice Auto-Play: OFF";
+            state.ttsOn = !state.ttsOn; saveState();
+            document.getElementById('tts-toggle').innerText = state.ttsOn ? "Pronunciation: ON" : "Pronunciation: OFF";
         }
-
         function resetLanguages() {
-            playSound('click');
             state.sourceLang = null; state.targetLang = null;
             localStorage.removeItem('sourceLang'); localStorage.removeItem('targetLang');
-            if (idb) {
-                try {
-                    const tx = idb.transaction('dataCache', 'readwrite');
-                    tx.objectStore('dataCache').clear();
-                } catch(e) {}
-            }
             toggleSettings(); startWizard();
         }
-
         function resetScore() {
-            playSound('click'); state.score = 0; state.streak = 0;
-            saveState(); updateStatsUI(); toggleSettings();
-        }
-
-        if ('serviceWorker' in navigator) {
-            const swCode = `
-                self.addEventListener('install', e => self.skipWaiting());
-                self.addEventListener('activate', e => e.waitUntil(clients.claim()));
-                self.addEventListener('fetch', e => {
-                    e.respondWith(fetch(e.request).catch(() => new Response('Offline', {status: 503})));
-                });
-            `;
-            const swBlob = new Blob([swCode], { type: 'application/javascript' });
-            const swUrl = URL.createObjectURL(swBlob);
-            navigator.serviceWorker.register(swUrl).catch(() => {});
+            state.score = 0; state.streak = 0; state.bestStreak = 0;
+            state.totalCorrect = 0; state.totalWrong = 0; state.usageData = {};
+            saveState(); updateXPUI(); toggleSettings();
         }
 
         window.onload = () => {
-            const tg = window.Telegram.WebApp;
-            tg.ready(); 
-            tg.expand(); 
-            tg.setHeaderColor('#050505'); 
-            tg.setBackgroundColor('#050505');
+            if(window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                tg.ready(); tg.expand();
+                tg.setHeaderColor('#090a0f'); 
+                tg.setBackgroundColor('#090a0f');
+            }
             init();
         };
     </script>
