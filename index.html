@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LangQuiz Pro</title>
+    <title>LangQuiz Pro & AI Voice</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         /* ==========================================
@@ -23,6 +23,8 @@
             --accent-red: rgba(239, 68, 68, 0.15);
             --accent-red-border: rgba(239, 68, 68, 0.5);
             --accent-red-text: #f87171;
+            
+            --accent-gold: #fbbf24;
             
             --text-primary: #ffffff;
             --text-secondary: rgba(255, 255, 255, 0.5);
@@ -85,6 +87,13 @@
         .mini-xp-fill { height: 100%; background: var(--text-primary); width: 0%; transition: width 0.4s ease; }
         
         .streak-fire { color: #ff9f0a; font-size: 14px; margin-right: 4px; }
+        .bonus-badge {
+            background: rgba(251, 191, 36, 0.2);
+            color: var(--accent-gold);
+            font-size: 10px; font-weight: bold;
+            padding: 2px 6px; border-radius: 8px;
+            margin-left: 6px; display: none;
+        }
         
         .header-actions { display: flex; gap: 8px; }
         .icon-btn { 
@@ -103,11 +112,7 @@
         }
         .screen.active { display: flex; }
         
-        /* Reusable animation class for triggers */
-        .animate-up {
-            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
+        .animate-up { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .wizard-title { font-size: 28px; font-weight: 700; letter-spacing: -1px; margin: 40px 0 30px; }
         .lang-grid { display: flex; flex-direction: column; gap: 12px; }
         .lang-btn { 
@@ -135,7 +140,6 @@
         .loader { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--text-primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
         
         .quiz-content { width: 100%; display: flex; flex-direction: column; gap: 50px; transition: opacity 0.3s; }
-        
         .question-section { text-align: center; width: 100%; }
         .direction-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; }
         
@@ -153,6 +157,7 @@
             cursor: pointer; transition: 0.2s;
         }
         .speaker-btn:active { transform: scale(0.8); color: var(--text-primary); }
+        .speaker-btn.playing { animation: pulse 1s infinite; color: var(--text-primary); }
 
         .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
         .option-btn { 
@@ -175,40 +180,44 @@
         }
 
         /* ==========================================
+           LEADERBOARD INTERFACE
+           ========================================== */
+        .page-header { font-size: 28px; font-weight: 700; letter-spacing: -1px; margin: 20px 0 30px; }
+        .leaderboard-list { display: flex; flex-direction: column; gap: 12px; }
+        .lb-item {
+            display: flex; align-items: center; padding: 16px; 
+            border-radius: var(--radius-md); gap: 16px;
+        }
+        .lb-item.is-me {
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+        }
+        .lb-rank { font-size: 18px; font-weight: 700; width: 30px; text-align: center; color: var(--text-secondary); }
+        .lb-rank.gold { color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.4); }
+        .lb-rank.silver { color: #94a3b8; }
+        .lb-rank.bronze { color: #b45309; }
+        .lb-avatar { font-size: 24px; }
+        .lb-info { flex: 1; display: flex; flex-direction: column; }
+        .lb-name { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+        .lb-xp { font-size: 13px; color: var(--accent-blue); font-weight: 500; margin-top: 2px;}
+
+        /* ==========================================
            DASHBOARD & STATS
            ========================================== */
-        .dash-header { font-size: 28px; font-weight: 700; letter-spacing: -1px; margin: 20px 0 30px; }
         .dash-card { border-radius: var(--radius-lg); padding: 24px; margin-bottom: 16px; }
         .dash-card h3 { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 24px; }
-        
         .stats-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
         .stat-block { display: flex; flex-direction: column; gap: 4px; }
         .stat-block .num { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
         .stat-block .lbl { font-size: 11px; color: var(--text-secondary); }
-
         .chart-canvas { width: 100%; height: 120px; }
-        
-        /* Activity Heatmap */
-        .activity-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 6px;
-            margin-top: 10px;
-        }
+        .activity-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 10px; }
         .activity-day {
-            aspect-ratio: 1;
-            border-radius: 6px;
-            background: rgba(255, 255, 255, 0.05);
+            aspect-ratio: 1; border-radius: 6px; background: rgba(255, 255, 255, 0.05);
             display: flex; justify-content: center; align-items: center;
-            font-size: 10px; color: var(--text-secondary);
-            border: 1px solid rgba(255,255,255,0.02);
+            font-size: 10px; color: var(--text-secondary); border: 1px solid rgba(255,255,255,0.02);
         }
-        .activity-day.active {
-            background: var(--accent-green-solid);
-            color: #000; font-weight: bold;
-            box-shadow: 0 0 10px rgba(46, 204, 113, 0.4);
-            border: none;
-        }
+        .activity-day.active { background: var(--accent-green-solid); color: #000; font-weight: bold; box-shadow: 0 0 10px rgba(46, 204, 113, 0.4); border: none; }
 
         /* ==========================================
            BOTTOM NAVIGATION
@@ -235,24 +244,20 @@
         }
         .modal-content { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; }
         .modal-btn { 
-            padding: 18px; border-radius: var(--radius-md); 
-            font-size: 15px; font-weight: 500; cursor: pointer; text-align: left; color: var(--text-primary);
+            padding: 18px; border-radius: var(--radius-md); font-size: 15px; font-weight: 500; cursor: pointer; text-align: left; color: var(--text-primary);
         }
         .close-btn { 
-            background: var(--text-primary); color: #000; border: none; 
-            padding: 18px; border-radius: var(--radius-md); font-size: 15px; font-weight: 700; 
-            cursor: margin-top: 12px; text-align: center;
+            background: var(--text-primary); color: #000; border: none; padding: 18px; border-radius: var(--radius-md); font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 12px; text-align: center;
         }
-
         .error-box { display: none; color: var(--accent-red-text); background: rgba(239, 68, 68, 0.1); border: 1px solid var(--accent-red-border); padding: 16px; border-radius: var(--radius-sm); margin-top: 20px; font-size: 14px; text-align: center; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         @keyframes shakeX { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-8px);} 75% {transform: translateX(8px);} }
     </style>
 </head>
 <body>
-    <audio id="tts-player" style="display: none;"></audio>
     
     <div class="app-container">
         <!-- Header -->
@@ -265,9 +270,10 @@
                         <div class="mini-xp-bar"><div class="mini-xp-fill" id="xp-bar-fill"></div></div>
                     </div>
                 </div>
-                <div class="stat-item" style="flex-direction: row; align-items: center;">
+                <div class="stat-item" style="flex-direction: row; align-items: center; position: relative;">
                     <span class="streak-fire">🔥</span>
                     <span class="stat-val" id="streak-display" style="font-size: 18px;">0</span>
+                    <span class="bonus-badge" id="bonus-badge">+0%</span>
                 </div>
             </div>
             <div class="header-actions">
@@ -290,7 +296,7 @@
 
         <!-- Quiz Screen -->
         <div id="quiz-screen" class="screen animate-up">
-            <div class="quiz-wrapper">
+            <div class="quiz-wrapper" id="quiz-wrapper">
                 <div class="inline-loader-container" id="inline-loader">
                     <div class="loader"></div>
                 </div>
@@ -308,9 +314,17 @@
             </div>
         </div>
 
+        <!-- Leaderboard Screen -->
+        <div id="leaderboard-screen" class="screen animate-up">
+            <h2 class="page-header">Leaderboard</h2>
+            <div class="leaderboard-list" id="leaderboard-list">
+                <!-- Renders Dynamically -->
+            </div>
+        </div>
+
         <!-- Dashboard Screen -->
         <div id="dashboard-screen" class="screen animate-up">
-            <h2 class="dash-header">Activity</h2>
+            <h2 class="page-header">Activity</h2>
             
             <div class="dash-card glass">
                 <h3>Overview</h3>
@@ -338,14 +352,15 @@
             <button class="nav-btn active" id="nav-word" onclick="switchMode('word')">📝</button>
             <button class="nav-btn" id="nav-sentence" onclick="switchMode('sentence')">💬</button>
             <div style="width: 1px; background: var(--border-subtle); margin: 6px 4px;"></div>
-            <button class="nav-btn" id="nav-toggle-btn" onclick="toggleNav()">📈</button>
+            <button class="nav-btn" id="nav-leaderboard-btn" onclick="toggleScreen('leaderboard')">🏆</button>
+            <button class="nav-btn" id="nav-toggle-btn" onclick="toggleScreen('dashboard')">📈</button>
         </div>
 
         <!-- Settings Modal -->
         <div id="settings-modal">
             <div class="modal-content animate-up">
                 <button class="modal-btn glass" id="sound-toggle" onclick="toggleSound()">Sound Effects: ON</button>
-                <button class="modal-btn glass" id="tts-toggle" onclick="toggleTTS()">Pronunciation: ON</button>
+                <button class="modal-btn glass" id="tts-toggle" onclick="toggleTTS()">AI Pronunciation: ON</button>
                 <button class="modal-btn glass" onclick="resetLanguages()">Change Languages</button>
                 <button class="modal-btn glass" style="color: var(--accent-red-text);" onclick="resetScore()">Reset Progress</button>
                 <button class="close-btn" onclick="toggleSettings()">Done</button>
@@ -361,9 +376,13 @@
             { id: 2, name: "Русский", emoji: "🇷🇺", ttsCode: "ru" }
         ];
         
-        const XP_BASE = 10;
-        const XP_PENALTY = 5;
-        const LEVEL_THRESHOLDS = [0, 500, 1200, 2500, 4500, 7000, 10000];
+        // XP Configuration
+        const XP_BASE_WORD = 10;
+        const XP_BASE_SENTENCE = 20;
+        const XP_PENALTY_WORD = 5;
+        const XP_PENALTY_SENTENCE = 10;
+        
+        const LEVEL_THRESHOLDS = [0, 500, 1200, 2500, 4500, 7000, 10000, 15000, 25000];
 
         let dbMatrix = [];
         let currentScreen = 'quiz';
@@ -372,7 +391,6 @@
         let canAnswer = true;
         let currentRawTextForSpeech = "";
         
-        // Web Audio Context (For synthesized sound effects)
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let sfxCtx = null;
 
@@ -398,6 +416,43 @@
             return 1;
         }
 
+        // ---------- Hybrid Text-to-Speech System ----------
+        function playTTS(text, shortLangCode) {
+            if (!state.ttsOn || !text) return;
+            
+            const btn = document.getElementById('speaker-btn');
+            btn.classList.add('playing');
+            let fallbackTriggered = false;
+            
+            const triggerFallback = () => {
+                if (fallbackTriggered) return;
+                fallbackTriggered = true;
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel(); 
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    if (shortLangCode === 'en') utterance.lang = 'en-US';
+                    else if (shortLangCode === 'ru') utterance.lang = 'ru-RU';
+                    else utterance.lang = 'fa-IR';
+                    
+                    utterance.onend = () => btn.classList.remove('playing');
+                    utterance.onerror = () => btn.classList.remove('playing');
+                    window.speechSynthesis.speak(utterance);
+                } else {
+                    btn.classList.remove('playing');
+                }
+            };
+
+            const cloudUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${shortLangCode}&q=${encodeURIComponent(text)}`;
+            const audio = new Audio(cloudUrl);
+            audio.onended = () => btn.classList.remove('playing');
+            audio.onerror = triggerFallback;
+            
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(triggerFallback);
+            }
+        }
+
         // ---------- Sound Effects System ----------
         function playSfx(type) {
             if (!state.soundOn) return;
@@ -408,29 +463,20 @@
             const gain = sfxCtx.createGain();
             osc.connect(gain);
             gain.connect(sfxCtx.destination);
-            
             const now = sfxCtx.currentTime;
             
             if (type === 'correct') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(500, now);
-                osc.frequency.exponentialRampToValueAtTime(1000, now + 0.1);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-                osc.start(now);
-                osc.stop(now + 0.2);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(500, now); osc.frequency.exponentialRampToValueAtTime(1000, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
             } else if (type === 'wrong') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(300, now);
-                osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                osc.start(now);
-                osc.stop(now + 0.3);
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
             }
         }
 
-        // ---------- UI Update & Rendering ----------
+        // ---------- Core Game UI ----------
         function updateXPUI() {
             const level = getLevel(state.score);
             const prev = LEVEL_THRESHOLDS[Math.max(0, level - 1)];
@@ -441,6 +487,15 @@
             document.getElementById('dash-level-header').innerText = level;
             document.getElementById('streak-display').innerText = state.streak;
             document.getElementById('xp-bar-fill').style.width = pct + '%';
+
+            const badge = document.getElementById('bonus-badge');
+            let bonusMulti = Math.min(Math.floor(state.streak / 4) * 0.2, 1.0);
+            if (bonusMulti > 0) {
+                badge.innerText = "+" + (bonusMulti * 100) + "%";
+                badge.style.display = "inline-block";
+            } else {
+                badge.style.display = "none";
+            }
         }
 
         function saveState() {
@@ -464,7 +519,7 @@
             updateXPUI();
             trackUsage();
             document.getElementById('sound-toggle').innerText = state.soundOn ? "Sound Effects: ON" : "Sound Effects: OFF";
-            document.getElementById('tts-toggle').innerText = state.ttsOn ? "Pronunciation: ON" : "Pronunciation: OFF";
+            document.getElementById('tts-toggle').innerText = state.ttsOn ? "AI Pronunciation: ON" : "AI Pronunciation: OFF";
             
             if (state.sourceLang !== null && state.targetLang !== null) {
                 await fetchDatabase(state.mode);
@@ -475,7 +530,6 @@
 
         async function fetchDatabase(mode) {
             const isInitialized = dbMatrix.length > 0;
-            
             if (isInitialized) {
                 document.getElementById('quiz-content').style.opacity = '0';
                 setTimeout(() => {
@@ -491,9 +545,7 @@
             try {
                 const response = await fetch(`${API_URL}${API_URL.includes('?') ? '&' : '?'}mode=${mode}`);
                 const data = await response.json();
-                if (data && data.length > 0) {
-                    dbMatrix = data;
-                }
+                if (data && data.length > 0) dbMatrix = data;
             } catch (e) { console.warn("Fetch Error", e); }
 
             if (dbMatrix.length > 0) {
@@ -510,57 +562,57 @@
                 document.getElementById('inline-loader').style.display = 'none';
                 document.getElementById('quiz-content').style.display = 'flex';
                 setTimeout(() => document.getElementById('quiz-content').style.opacity = '1', 50);
-                
             } else {
                 document.getElementById('loading-text').style.display = 'none';
-                document.getElementById('spinner').style.display = 'none';
                 document.getElementById('error-box').innerText = "خطا در دریافت اطلاعات.";
                 document.getElementById('error-box').style.display = 'block';
             }
         }
 
-        // ---------- Trigger Animation ----------
         function triggerAnimation(elementId) {
             const el = document.getElementById(elementId);
             if(el) {
                 el.classList.remove('animate-up');
-                void el.offsetWidth; // trigger reflow
+                void el.offsetWidth;
                 el.classList.add('animate-up');
             }
         }
 
-        // ---------- Navigation & Wizard ----------
         function switchMode(newMode) {
             if (state.mode === newMode && currentScreen === 'quiz') return;
             state.mode = newMode;
             if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
                 window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
             }
+            if(currentScreen !== 'quiz') showScreen('quiz-screen'); 
+            else triggerAnimation('quiz-wrapper');
             
-            if(currentScreen !== 'quiz') { 
-                showScreen('quiz-screen'); 
-            } else {
-                // Apply animation when clicking bottom nav to switch mode
-                triggerAnimation('quiz-wrapper');
-            }
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('nav-' + newMode).classList.add('active');
             
             fetchDatabase(newMode);
         }
 
-        function toggleNav() {
-            if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+        function toggleScreen(targetScreen) {
+            if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+                window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            }
+            
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            if (currentScreen === 'dashboard') {
+            
+            if (currentScreen === targetScreen) {
                 currentScreen = 'quiz';
                 document.getElementById('nav-' + state.mode).classList.add('active');
                 showScreen('quiz-screen');
                 triggerAnimation('quiz-wrapper');
             } else {
-                currentScreen = 'dashboard';
-                document.getElementById('nav-toggle-btn').classList.add('active');
-                showScreen('dashboard-screen');
-                triggerAnimation('dashboard-screen');
-                renderDashboard();
+                currentScreen = targetScreen;
+                document.getElementById('nav-' + targetScreen + '-btn').classList.add('active');
+                showScreen(targetScreen + '-screen');
+                triggerAnimation(targetScreen + '-screen');
+                
+                if (targetScreen === 'dashboard') renderDashboard();
+                if (targetScreen === 'leaderboard') renderLeaderboard();
             }
         }
 
@@ -606,7 +658,6 @@
             }
         }
 
-        // ---------- Quiz Logic ----------
         async function loadQuestion() {
             if (dbMatrix.length === 0) return;
             canAnswer = true;
@@ -645,14 +696,13 @@
 
             if(state.ttsOn) {
                 const shortLang = LANGUAGES.find(l => l.id === state.sourceLang).ttsCode;
-                setTimeout(() => playGoogleTTS(currentRawTextForSpeech, shortLang), 300);
+                setTimeout(() => playTTS(currentRawTextForSpeech, shortLang), 300);
             }
         }
 
         function checkAnswer(btn, selected, correct) {
             if (!canAnswer) return;
             canAnswer = false;
-            
             const isCorrect = selected === correct;
             const haptic = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback;
 
@@ -660,34 +710,71 @@
                 if(haptic) haptic.notificationOccurred('success');
                 playSfx('correct');
                 btn.classList.add('correct');
+                
                 state.streak++;
                 if (state.streak > state.bestStreak) state.bestStreak = state.streak;
                 state.totalCorrect++;
-                state.score += XP_BASE;
+                
+                let baseXP = (state.mode === 'sentence') ? XP_BASE_SENTENCE : XP_BASE_WORD;
+                let bonusMultiplier = Math.min(Math.floor(state.streak / 4) * 0.2, 1.0); 
+                let finalXP = Math.round(baseXP * (1 + bonusMultiplier));
+                
+                state.score += finalXP;
             } else {
                 if(haptic) haptic.notificationOccurred('error');
                 playSfx('wrong');
                 btn.classList.add('wrong');
                 state.streak = 0;
                 state.totalWrong++;
-                state.score = Math.max(0, state.score - XP_PENALTY);
+                
+                let penaltyXP = (state.mode === 'sentence') ? XP_PENALTY_SENTENCE : XP_PENALTY_WORD;
+                state.score = Math.max(0, state.score - penaltyXP);
             }
-            
-            saveState();
-            updateXPUI();
-            setTimeout(() => loadQuestion(), 1000);
-        }
-
-        function playGoogleTTS(text, shortLangCode) {
-            const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${shortLangCode}&client=tw-ob&q=${encodeURIComponent(text)}`;
-            const player = document.getElementById('tts-player');
-            player.src = audioUrl;
-            player.play().catch(e => console.warn(e));
+            saveState(); updateXPUI();
+            setTimeout(() => loadQuestion(), 1200);
         }
 
         function replayAudio() {
             const shortLang = LANGUAGES.find(l => l.id === state.sourceLang).ttsCode;
-            playGoogleTTS(currentRawTextForSpeech, shortLang);
+            playTTS(currentRawTextForSpeech, shortLang);
+        }
+
+        // ---------- Leaderboard ----------
+        function renderLeaderboard() {
+            const container = document.getElementById('leaderboard-list');
+            container.innerHTML = '';
+            
+            let users = [
+                { name: "Alex Turing", xp: 12500, avatar: "👨‍🚀", isMe: false },
+                { name: "Sarah Connor", xp: 9800, avatar: "👩‍🎤", isMe: false },
+                { name: "Max Payne", xp: 8400, avatar: "🕵️‍♂️", isMe: false },
+                { name: "Nina Williams", xp: 7200, avatar: "🦸‍♀️", isMe: false },
+                { name: "Leo Messi", xp: 6100, avatar: "🥷", isMe: false },
+                { name: "You", xp: state.score, avatar: "😎", isMe: true } 
+            ];
+
+            users.sort((a, b) => b.xp - a.xp);
+
+            users.forEach((user, index) => {
+                const rank = index + 1;
+                let rankClass = '';
+                if (rank === 1) rankClass = 'gold';
+                else if (rank === 2) rankClass = 'silver';
+                else if (rank === 3) rankClass = 'bronze';
+
+                const item = document.createElement('div');
+                item.className = `lb-item glass ${user.isMe ? 'is-me' : ''}`;
+                
+                item.innerHTML = `
+                    <div class="lb-rank ${rankClass}">#${rank}</div>
+                    <div class="lb-avatar">${user.avatar}</div>
+                    <div class="lb-info">
+                        <span class="lb-name">${user.name}</span>
+                        <span class="lb-xp">${user.xp.toLocaleString()} XP</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
         }
 
         // ---------- Dashboard & Charts ----------
@@ -695,12 +782,9 @@
             document.getElementById('dash-level').innerText = getLevel(state.score);
             document.getElementById('dash-xp').innerText = state.score;
             document.getElementById('dash-best-streak').innerText = state.bestStreak;
-            
             const total = state.totalCorrect + state.totalWrong;
             document.getElementById('dash-accuracy').innerText = total > 0 ? Math.round((state.totalCorrect / total) * 100) + '%' : '0%';
-            
-            drawWeeklyChart();
-            renderActivityHeatmap();
+            drawWeeklyChart(); renderActivityHeatmap();
         }
 
         function drawWeeklyChart() {
@@ -716,17 +800,13 @@
             const now = new Date();
             const weeklyValues = [];
             const labels = [];
-            
             const daysArr = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
             
             for (let i = 6; i >= 0; i--) {
                 let d = new Date();
                 d.setDate(now.getDate() - i);
                 let mKey = `${d.getFullYear()}-${d.getMonth()}`;
-                
                 let wasActive = (state.usageData[mKey] && state.usageData[mKey].includes(d.getDate())) ? 1 : 0;
-                
-                // Add tiny visual bar for empty days just to show structure, full bar if active
                 weeklyValues.push(wasActive ? 10 : 1);
                 labels.push(daysArr[d.getDay()]);
             }
@@ -755,11 +835,9 @@
         function renderActivityHeatmap() {
             const grid = document.getElementById('activity-grid');
             grid.innerHTML = '';
-            
             const now = new Date();
             const year = now.getFullYear();
             const month = now.getMonth();
-            
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
             document.getElementById('month-title').innerText = `${monthNames[month]} Activity`;
             
@@ -771,10 +849,7 @@
                 const dayEl = document.createElement('div');
                 dayEl.className = 'activity-day';
                 dayEl.innerText = i;
-                
-                if (activeDays.includes(i)) {
-                    dayEl.classList.add('active');
-                }
+                if (activeDays.includes(i)) dayEl.classList.add('active');
                 grid.appendChild(dayEl);
             }
         }
@@ -790,7 +865,7 @@
         }
         function toggleTTS() {
             state.ttsOn = !state.ttsOn; saveState();
-            document.getElementById('tts-toggle').innerText = state.ttsOn ? "Pronunciation: ON" : "Pronunciation: OFF";
+            document.getElementById('tts-toggle').innerText = state.ttsOn ? "AI Pronunciation: ON" : "AI Pronunciation: OFF";
         }
         function resetLanguages() {
             state.sourceLang = null; state.targetLang = null;
