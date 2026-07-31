@@ -276,27 +276,6 @@
         let sfxCtx = null;
         let currentAudio = null;
         let cachedVoices = [];
-        let tgUser = null; // متغیر برای ذخیره اطلاعات کاربر تلگرام
-
-        // --- NEW: Sync Data to Backend ---
-        async function syncScoreToBackend() {
-            if (!tgUser) return;
-            const payload = {
-                action: 'updateScore',
-                userId: tgUser.id,
-                username: tgUser.username || tgUser.first_name || 'Learner',
-                score: state.score,
-                streak: state.streak
-            };
-            try {
-                await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-            } catch (e) {
-                console.error('Sync error', e);
-            }
-        }
 
         function loadState() {
             const defaults = { 
@@ -727,16 +706,9 @@
             fetchDatabase(newMode);
         }
 
-        // --- UPDATED: Sync triggers when opening Dash/Leaderboard ---
         function toggleScreen(targetScreen) {
             if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
             document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
-            
-            // Sync before leaving quiz screen
-            if (currentScreen === 'quiz' && (targetScreen === 'dashboard' || targetScreen === 'leaderboard')) {
-                syncScoreToBackend();
-            }
-
             if (currentScreen === targetScreen) {
                 currentScreen = 'quiz';
                 document.getElementById('nav-' + state.mode).classList.add('active');
@@ -927,52 +899,28 @@
             playTTS(currentRawTextForSpeech, shortLang);
         }
 
-        // --- UPDATED: Live Leaderboard Logic ---
-        async function renderLeaderboard() {
+        // ---------- Leaderboard ----------
+        function renderLeaderboard() {
             const container = document.getElementById('leaderboard-list');
-            container.innerHTML = '<div style="display:flex; justify-content:center; padding:40px;"><div class="loader"></div></div>';
-            
-            let users = [];
-            let myUserId = tgUser ? tgUser.id : 'local';
-
-            try {
-                // Fetch live data from your existing Google Sheet API_URL
-                const response = await fetch(API_URL + (API_URL.includes('?') ? '&' : '?') + 'action=leaderboard');
-                const data = await response.json();
-                if (data && data.leaderboard) {
-                    users = data.leaderboard;
-                } else {
-                    throw new Error("No leaderboard data found");
-                }
-            } catch (e) {
-                console.error("Leaderboard fetch error:", e);
-                // Fallback to dummy data if offline or error
-                users = [
-                    { id: '1', name: "Alex Turing", xp: 12500, avatar: "👨‍🚀" },
-                    { id: '2', name: "Sarah Connor", xp: 9800, avatar: "👩‍🎤" },
-                    { id: myUserId, name: tgUser ? (tgUser.username || tgUser.first_name) : "You", xp: state.score, avatar: "😎" } 
-                ];
-            }
-
-            // Ensure current user is in the list
-            if (!users.find(u => u.id == myUserId)) {
-                users.push({ id: myUserId, name: tgUser ? (tgUser.username || tgUser.first_name) : "You", xp: state.score, avatar: "😎" });
-            }
-
             container.innerHTML = '';
+            let users = [
+                { name: "Alex Turing", xp: 12500, avatar: "\ud83d\udc68\u200d\ud83d\ude80", isMe: false },
+                { name: "Sarah Connor", xp: 9800, avatar: "\ud83d\udc69\u200d\ud83c\udfa4", isMe: false },
+                { name: "Max Payne", xp: 8400, avatar: "\ud83d\udd75\ufe0f\u200d\u2642\ufe0f", isMe: false },
+                { name: "Nina Williams", xp: 7200, avatar: "\ud83e\uddb8\u200d\u2640\ufe0f", isMe: false },
+                { name: "Leo Messi", xp: 6100, avatar: "\ud83e\udd77", isMe: false },
+                { name: "You", xp: state.score, avatar: "\ud83d\ude0e", isMe: true } 
+            ];
             users.sort(function(a, b) { return b.xp - a.xp; });
-            
             users.forEach(function(user, index) {
                 const rank = index + 1;
                 let rankClass = '';
                 if (rank === 1) rankClass = 'gold';
                 else if (rank === 2) rankClass = 'silver';
                 else if (rank === 3) rankClass = 'bronze';
-                
-                const isMe = (user.id == myUserId);
                 const item = document.createElement('div');
-                item.className = 'lb-item glass' + (isMe ? ' is-me' : '');
-                item.innerHTML = '<div class="lb-rank ' + rankClass + '">#' + rank + '</div><div class="lb-avatar">' + user.avatar + '</div><div class="lb-info"><span class="lb-name">' + user.name + '</span><span class="lb-xp">' + parseInt(user.xp).toLocaleString() + ' XP</span></div>';
+                item.className = 'lb-item glass' + (user.isMe ? ' is-me' : '');
+                item.innerHTML = '<div class="lb-rank ' + rankClass + '">#' + rank + '</div><div class="lb-avatar">' + user.avatar + '</div><div class="lb-info"><span class="lb-name">' + user.name + '</span><span class="lb-xp">' + user.xp.toLocaleString() + ' XP</span></div>';
                 container.appendChild(item);
             });
         }
@@ -1108,16 +1056,11 @@
         }
 
         window.onload = function() {
-            // --- NEW: Init Telegram Data ---
             if(window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
                 tg.ready(); tg.expand();
                 tg.setHeaderColor('#090a0f'); 
                 tg.setBackgroundColor('#090a0f');
-                // دریافت دیتای اکانت یوزر از تلگرام
-                if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                    tgUser = tg.initDataUnsafe.user;
-                }
             }
             document.addEventListener('visibilitychange', function() {
                 document.body.style.animationPlayState = document.hidden ? 'paused' : 'running';
