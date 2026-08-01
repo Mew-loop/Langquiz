@@ -150,6 +150,7 @@
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         @keyframes shakeX { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-8px);} 75% {transform: translateX(8px);} }
     </style>
+<base target="_blank">
 </head>
 <body>
     <div class="app-container">
@@ -327,6 +328,41 @@
         let currentAudio = null;
         let cachedVoices = [];
         let tgUser = null;
+
+        // ==========================================================
+        // AUDIO UNLOCKING FOR MOBILE DEVICES
+        // Mobile browsers (iOS Safari, Android WebView, Telegram
+        // WebApp) block audio playback until a user gesture occurs.
+        // We unlock Web Audio API, HTML5 Audio, and speechSynthesis
+        // on the first touch/click, enabling autoplay afterwards.
+        // ==========================================================
+        let audioUnlocked = false;
+
+        function unlockAudio() {
+            if (audioUnlocked) return;
+            audioUnlocked = true;
+
+            // 1. Unlock Web Audio API (used for SFX)
+            if (!sfxCtx) {
+                sfxCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (sfxCtx && sfxCtx.state === 'suspended') {
+                sfxCtx.resume().catch(function(){});
+            }
+
+            // 2. Unlock HTML5 Audio by playing a silent sound.
+            // This "blesses" the audio system for future autoplay.
+            var silent = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==");
+            silent.play().catch(function(){});
+
+            // 3. Unlock Web Speech API (speechSynthesis)
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                var u = new SpeechSynthesisUtterance('');
+                u.volume = 0.001;
+                window.speechSynthesis.speak(u);
+            }
+        }
 
         // --- استخراج نام نمایشی به جای یوزرنیم ---
         function getDisplayUsername(userObj) {
@@ -604,6 +640,8 @@
 
         function playTTS(text, shortLangCode) {
             if (!state.ttsOn || !text) return;
+            // Mobile safeguard: ensure audio system is unlocked
+            if (!audioUnlocked) unlockAudio();
             const btn = document.getElementById('speaker-btn');
             if (btn) btn.classList.add('playing');
             if (currentAudio) {
@@ -642,6 +680,7 @@
 
         function playSfx(type) {
             if (!state.soundOn) return;
+            if (!audioUnlocked) unlockAudio();
             if (!sfxCtx) sfxCtx = new AudioContext();
             if (sfxCtx.state === 'suspended') sfxCtx.resume().catch(function(){});
             const osc = sfxCtx.createOscillator();
@@ -1184,8 +1223,18 @@
                     tgUser = tg.initDataUnsafe.user;
                 }
             }
+
+            // Unlock audio on first user interaction (critical for mobile)
+            ['touchstart', 'touchend', 'click'].forEach(function(evt) {
+                document.addEventListener(evt, unlockAudio, { once: true, passive: true });
+            });
+
             document.addEventListener('visibilitychange', function() {
                 document.body.style.animationPlayState = document.hidden ? 'paused' : 'running';
+                // Resume audio context when user returns to the app
+                if (!document.hidden && sfxCtx && sfxCtx.state === 'suspended') {
+                    sfxCtx.resume().catch(function(){});
+                }
             });
             init();
         };
