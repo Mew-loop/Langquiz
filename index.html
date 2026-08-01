@@ -278,7 +278,7 @@
     </div>
 
     <script>
-        // لینک اختصاصی Web App شما
+        // لینک اختصاصی Web App شما - دقت کنید که تغییر ندهید مگه اینکه لینک جدید بگیرید
         const API_URL = 'https://script.google.com/macros/s/AKfycbxaFlDv6NHyQBZS1B5r8yu_0qwxU74cPNvm4YpVaLenCXleOQIDcQelXCDYVlb9wuVQ/exec'; 
 
         const LANGUAGES = [
@@ -328,20 +328,35 @@
         let cachedVoices = [];
         let tgUser = null;
 
+        // --- استخراج نام نمایشی به جای یوزرنیم ---
+        function getDisplayUsername(userObj) {
+            if (!userObj) return "Learner";
+            let name = "";
+            if (userObj.first_name) {
+                name = userObj.first_name;
+                if (userObj.last_name) name += " " + userObj.last_name;
+            } else if (userObj.username) {
+                name = userObj.username;
+            } else {
+                name = "Learner";
+            }
+            return name;
+        }
+
         // --- همگام‌سازی اطلاعات کاربر با گوگل شیت ---
         function syncScoreToBackend() {
             if (!tgUser) return;
             const payload = {
                 action: 'updateScore',
                 userId: tgUser.id,
-                username: tgUser.username || tgUser.first_name || 'Learner',
+                username: getDisplayUsername(tgUser),
                 xp: state.score,
-                streak: state.streak
+                streak: Math.max(state.streak, state.bestStreak) // بالاترین استرایک رو ثبت میکنه
             };
             try {
                 fetch(API_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
+                    mode: 'no-cors', // حتما no-cors باشه برای Apps Script
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
@@ -366,6 +381,7 @@
             }
             s.score = parseInt(s.score) || 0;
             s.streak = parseInt(s.streak) || 0;
+            s.bestStreak = parseInt(s.bestStreak) || 0; // چک کردن برای جلوگیری از باگ
             s.lives = parseInt(s.lives) || MAX_LIVES;
             s.consecutiveDays = parseInt(s.consecutiveDays) || 0;
             s.langSwitches = parseInt(s.langSwitches) || 0;
@@ -960,7 +976,7 @@
             playTTS(currentRawTextForSpeech, shortLang);
         }
 
-        // --- نمایش لیدربورد انلاین ---
+        // --- اصلاح ساختار دریافت اطلاعات از بک‌اند ---
         async function renderLeaderboard() {
             const container = document.getElementById('leaderboard-list');
             container.innerHTML = '<div style="display:flex; justify-content:center; padding:40px;"><div class="loader"></div></div>';
@@ -971,7 +987,11 @@
             try {
                 const response = await fetch(API_URL + (API_URL.includes('?') ? '&' : '?') + 'action=getLeaderboard');
                 const data = await response.json();
-                if (Array.isArray(data)) {
+                
+                // در بک‌اند جدید ما، اطلاعات در data.data ارسال می‌شه
+                if (data && data.status === 'success' && Array.isArray(data.data)) {
+                    users = data.data;
+                } else if (Array.isArray(data)) {
                     users = data;
                 } else if (data && data.leaderboard) {
                     users = data.leaderboard;
@@ -980,15 +1000,16 @@
                 console.error("Leaderboard fetch error:", e);
             }
 
+            // اگه کاربر تو لیست اصلی نبود خودش رو به لیست اضافه کنه
             if (!users || users.length === 0) {
                 users = [
-                    { userId: myUserId, username: tgUser ? (tgUser.username || tgUser.first_name) : "You", xp: state.score }
+                    { userId: myUserId, username: getDisplayUsername(tgUser), xp: state.score, strikes: Math.max(state.streak, state.bestStreak) }
                 ];
             }
 
             const exists = users.find(u => (u.userId || u.id) == myUserId);
             if (!exists) {
-                users.push({ userId: myUserId, username: tgUser ? (tgUser.username || tgUser.first_name) : "You", xp: state.score });
+                users.push({ userId: myUserId, username: getDisplayUsername(tgUser), xp: state.score, strikes: Math.max(state.streak, state.bestStreak) });
             }
 
             container.innerHTML = '';
@@ -1005,6 +1026,7 @@
                 const uId = user.userId || user.id;
                 const uName = user.username || user.name || "Anonymous";
                 const uXp = user.xp !== undefined ? user.xp : 0;
+                const uStrikes = user.strikes !== undefined ? user.strikes : 0;
                 const isMe = (uId == myUserId);
 
                 const item = document.createElement('div');
@@ -1014,7 +1036,10 @@
                     <div class="lb-avatar">${user.avatar || '👤'}</div>
                     <div class="lb-info">
                         <span class="lb-name">${uName} ${isMe ? '(You)' : ''}</span>
-                        <span class="lb-xp">${parseInt(uXp).toLocaleString()} XP</span>
+                        <div style="display: flex; gap: 10px;">
+                            <span class="lb-xp">${parseInt(uXp).toLocaleString()} XP</span>
+                            <span class="lb-xp" style="color: #fbbf24;">🔥 ${uStrikes}</span>
+                        </div>
                     </div>
                 `;
                 container.appendChild(item);
