@@ -64,7 +64,7 @@
         .lang-btn .emoji { font-size: 28px; }
         .lang-btn:active { transform: scale(0.95); background: rgba(40,40,45,0.6); }
         .quiz-wrapper { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 40px; position: relative; }
-        .inline-loader-container { display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .inline-loader-container { display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; }
         .loader { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--text-primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
         .quiz-content { width: 100%; display: flex; flex-direction: column; gap: 40px; transition: opacity 0.3s; }
         .question-section { text-align: center; width: 100%; }
@@ -74,13 +74,13 @@
         .chip.active { background: rgba(59,130,246,0.2); color: var(--accent-blue); border-color: rgba(59,130,246,0.3); }
         .chip:active { transform: scale(0.95); }
         .word-wrapper { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-        .question-word { font-size: 38px; font-weight: 800; letter-spacing: -1.5px; line-height: 1.2; margin: 0; color: var(--text-primary); text-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .question-word { font-size: 32px; font-weight: 800; letter-spacing: -1px; line-height: 1.2; margin: 0; color: var(--text-primary); text-shadow: 0 4px 20px rgba(0,0,0,0.3); word-break: break-word; }
         .highlight-word { color: var(--accent-blue); }
         .speaker-btn { background: transparent; border: none; color: var(--text-secondary); font-size: 26px; cursor: pointer; transition: 0.2s; padding: 8px; }
         .speaker-btn:active { transform: scale(0.8); color: var(--text-primary); }
         .speaker-btn.playing { animation: pulse 1s infinite; color: var(--text-primary); }
         .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; }
-        .option-btn { color: var(--text-primary); padding: 20px 14px; border-radius: var(--radius-lg); font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; align-items: center; justify-content: center; text-align: center; min-height: 75px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); overflow: hidden; word-break: break-word; -webkit-line-clamp: 2; -webkit-box-orient: vertical; display: -webkit-box; }
+        .option-btn { color: var(--text-primary); padding: 18px 12px; border-radius: var(--radius-lg); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; align-items: center; justify-content: center; text-align: center; min-height: 75px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); overflow: hidden; word-break: break-word; -webkit-line-clamp: 3; -webkit-box-orient: vertical; display: -webkit-box; }
         .option-btn:active { transform: scale(0.95); background: rgba(40,40,45,0.6); }
         .option-btn.correct { background: var(--accent-green); border-color: var(--accent-green-border); color: var(--accent-green-text); font-weight: 600; transform: scale(1.02); box-shadow: 0 0 20px rgba(46, 204, 113, 0.1); }
         .option-btn.wrong { background: var(--accent-red); border-color: var(--accent-red-border); color: var(--accent-red-text); font-weight: 600; animation: shakeX 0.4s; }
@@ -143,14 +143,13 @@
         .settings-btn .s-icon { font-size: 24px; }
         .close-btn { background: var(--text-primary); color: #000; border: none; padding: 18px; border-radius: var(--radius-md); font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 12px; text-align: center; }
         .error-box { display: none; color: var(--accent-red-text); background: rgba(239, 68, 68, 0.1); border: 1px solid var(--accent-red-border); padding: 16px; border-radius: var(--radius-sm); margin-top: 20px; font-size: 14px; text-align: center; }
-        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); padding: 12px 20px; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; z-index: 200; opacity: 0; transition: all 0.3s; pointer-events: none; color: var(--text-primary); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); padding: 12px 20px; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; z-index: 200; opacity: 0; transition: all 0.3s; pointer-events: none; color: var(--text-primary); box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         @keyframes shakeX { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-8px);} 75% {transform: translateX(8px);} }
     </style>
-<base target="_blank">
 </head>
 <body>
     <div class="app-container">
@@ -279,7 +278,6 @@
     </div>
 
     <script>
-        // لینک اختصاصی Web App شما - دقت کنید که تغییر ندهید مگه اینکه لینک جدید بگیرید
         const API_URL = 'https://script.google.com/macros/s/AKfycbxaFlDv6NHyQBZS1B5r8yu_0qwxU74cPNvm4YpVaLenCXleOQIDcQelXCDYVlb9wuVQ/exec'; 
 
         const LANGUAGES = [
@@ -326,23 +324,16 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let sfxCtx = null;
         let currentAudio = null;
+        let currentUtterance = null;
         let cachedVoices = [];
         let tgUser = null;
 
-        // ==========================================================
-        // AUDIO UNLOCKING FOR MOBILE DEVICES
-        // Mobile browsers (iOS Safari, Android WebView, Telegram
-        // WebApp) block audio playback until a user gesture occurs.
-        // We unlock Web Audio API, HTML5 Audio, and speechSynthesis
-        // on the first touch/click, enabling autoplay afterwards.
-        // ==========================================================
         let audioUnlocked = false;
 
         function unlockAudio() {
             if (audioUnlocked) return;
             audioUnlocked = true;
 
-            // 1. Unlock Web Audio API (used for SFX)
             if (!sfxCtx) {
                 sfxCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
@@ -350,12 +341,9 @@
                 sfxCtx.resume().catch(function(){});
             }
 
-            // 2. Unlock HTML5 Audio by playing a silent sound.
-            // This "blesses" the audio system for future autoplay.
             var silent = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==");
             silent.play().catch(function(){});
 
-            // 3. Unlock Web Speech API (speechSynthesis)
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 var u = new SpeechSynthesisUtterance('');
@@ -364,7 +352,6 @@
             }
         }
 
-        // --- استخراج نام نمایشی به جای یوزرنیم ---
         function getDisplayUsername(userObj) {
             if (!userObj) return "Learner";
             let name = "";
@@ -376,23 +363,22 @@
             } else {
                 name = "Learner";
             }
-            return name;
+            return name.trim();
         }
 
-        // --- همگام‌سازی اطلاعات کاربر با گوگل شیت ---
         function syncScoreToBackend() {
             if (!tgUser) return;
             const payload = {
                 action: 'updateScore',
-                userId: tgUser.id,
+                userId: String(tgUser.id),
                 username: getDisplayUsername(tgUser),
                 xp: state.score,
-                streak: Math.max(state.streak, state.bestStreak) // بالاترین استرایک رو ثبت میکنه
+                streak: Math.max(state.streak, state.bestStreak)
             };
             try {
                 fetch(API_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // حتما no-cors باشه برای Apps Script
+                    mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
@@ -406,7 +392,7 @@
                 score: 0, streak: 0, bestStreak: 0, sourceLang: null, targetLang: null, 
                 soundOn: true, ttsOn: true, mode: 'word', totalCorrect: 0, totalWrong: 0, usageData: {},
                 lives: MAX_LIVES, lastLifeUpdate: null, consecutiveDays: 0, lastLoginDate: null,
-                achievements: {}, srsData: {}, mistakeBank: [], mistakeStats: {}, langSwitches: 0,
+                achievements: {}, srsData: { word: {}, sentence: {} }, mistakeBank: { word: [], sentence: [] }, mistakeStats: { word: {}, sentence: {} }, langSwitches: 0,
                 isReverseMode: false, isListeningMode: false, reviewMode: 'normal'
             };
             const s = {};
@@ -417,15 +403,26 @@
             }
             s.score = parseInt(s.score) || 0;
             s.streak = parseInt(s.streak) || 0;
-            s.bestStreak = parseInt(s.bestStreak) || 0; // چک کردن برای جلوگیری از باگ
+            s.bestStreak = parseInt(s.bestStreak) || 0;
             s.lives = parseInt(s.lives) || MAX_LIVES;
             s.consecutiveDays = parseInt(s.consecutiveDays) || 0;
             s.langSwitches = parseInt(s.langSwitches) || 0;
             if (!s.usageData) s.usageData = {};
             if (!s.achievements) s.achievements = {};
-            if (!s.srsData) s.srsData = {};
-            if (!s.mistakeBank) s.mistakeBank = [];
-            if (!s.mistakeStats) s.mistakeStats = {};
+            
+            // اصلاح ساختار متغیرها برای تفکیک بین کلمات و جملات
+            if (!s.srsData || typeof s.srsData !== 'object') s.srsData = { word: {}, sentence: {} };
+            if (!s.srsData.word) s.srsData = { word: s.srsData || {}, sentence: {} };
+            if (!s.srsData.sentence) s.srsData.sentence = {};
+
+            if (!s.mistakeBank || typeof s.mistakeBank !== 'object') s.mistakeBank = { word: [], sentence: [] };
+            if (Array.isArray(s.mistakeBank)) s.mistakeBank = { word: s.mistakeBank, sentence: [] };
+            if (!s.mistakeBank.sentence) s.mistakeBank.sentence = [];
+
+            if (!s.mistakeStats || typeof s.mistakeStats !== 'object') s.mistakeStats = { word: {}, sentence: {} };
+            if (!s.mistakeStats.word) s.mistakeStats = { word: s.mistakeStats || {}, sentence: {} };
+            if (!s.mistakeStats.sentence) s.mistakeStats.sentence = {};
+
             if (s.lives < MAX_LIVES && s.lastLifeUpdate) {
                 const now = Date.now();
                 const elapsed = now - s.lastLifeUpdate;
@@ -478,6 +475,7 @@
         function showOutOfHearts() {
             document.getElementById('out-of-hearts-overlay').style.display = 'flex';
             updateHeartTimer();
+            clearInterval(heartTimerInterval);
             heartTimerInterval = setInterval(updateHeartTimer, 1000);
         }
 
@@ -556,8 +554,9 @@
         }
 
         function updateSRS(wordIndex, isCorrect) {
+            const m = state.mode;
             const day = 24 * 60 * 60 * 1000;
-            let card = state.srsData[wordIndex];
+            let card = state.srsData[m][wordIndex];
             if (!card) card = { interval: 0, repetitions: 0, ef: 2.5, nextReview: 0 };
             if (isCorrect) {
                 card.repetitions++;
@@ -571,34 +570,34 @@
                 card.ef = Math.max(1.3, card.ef - 0.2);
             }
             card.nextReview = Date.now() + (card.interval * day);
-            state.srsData[wordIndex] = card;
+            state.srsData[m][wordIndex] = card;
         }
 
         function getNextSRSWord() {
+            const m = state.mode;
             const now = Date.now();
-            const dueIndices = Object.keys(state.srsData).map(Number).filter(idx => state.srsData[idx].nextReview <= now && idx < dbMatrix.length);
+            const dueIndices = Object.keys(state.srsData[m]).map(Number).filter(idx => state.srsData[m][idx] && state.srsData[m][idx].nextReview <= now && idx < dbMatrix.length);
             if (dueIndices.length > 0) return dueIndices[Math.floor(Math.random() * dueIndices.length)];
             return -1;
         }
 
         function addToMistakeBank(idx) {
-            if (!state.mistakeBank.includes(idx)) {
-                state.mistakeBank.push(idx);
-                state.mistakeStats[idx] = 0;
-                saveState();
-            } else {
-                state.mistakeStats[idx] = 0;
-                saveState();
+            const m = state.mode;
+            if (!state.mistakeBank[m].includes(idx)) {
+                state.mistakeBank[m].push(idx);
             }
+            state.mistakeStats[m][idx] = 0;
+            saveState();
         }
 
         function recordCorrectForMistake(idx) {
-            if (!state.mistakeBank.includes(idx)) return;
-            state.mistakeStats[idx] = (state.mistakeStats[idx] || 0) + 1;
-            if (state.mistakeStats[idx] >= 3) {
-                state.mistakeBank = state.mistakeBank.filter(i => i !== idx);
-                delete state.mistakeStats[idx];
-                showToast('✅ Mistake mastered! Removed from review.', 3000);
+            const m = state.mode;
+            if (!state.mistakeBank[m].includes(idx)) return;
+            state.mistakeStats[m][idx] = (state.mistakeStats[m][idx] || 0) + 1;
+            if (state.mistakeStats[m][idx] >= 3) {
+                state.mistakeBank[m] = state.mistakeBank[m].filter(i => i !== idx);
+                delete state.mistakeStats[m][idx];
+                showToast('✅ Item mastered! Removed from review.', 3000);
             }
             saveState();
         }
@@ -640,10 +639,10 @@
 
         function playTTS(text, shortLangCode) {
             if (!state.ttsOn || !text) return;
-            // Mobile safeguard: ensure audio system is unlocked
             if (!audioUnlocked) unlockAudio();
             const btn = document.getElementById('speaker-btn');
             if (btn) btn.classList.add('playing');
+            
             if (currentAudio) {
                 currentAudio.pause();
                 currentAudio.onended = null;
@@ -651,12 +650,13 @@
                 currentAudio.src = '';
                 currentAudio = null;
             }
-            window.speechSynthesis.cancel();
+
+            const stopAnimation = function() { if (btn) btn.classList.remove('playing'); };
             const cloudUrl = 'https://translate.google.com/translate_tts?ie=UTF-8&client=gtx&tl=' + shortLangCode + '&q=' + encodeURIComponent(text);
             currentAudio = new Audio(cloudUrl);
-            const stopAnimation = function() { if (btn) btn.classList.remove('playing'); };
             currentAudio.onended = stopAnimation;
             currentAudio.onerror = function() { playFallbackTTS(text, shortLangCode, stopAnimation); };
+            
             const playPromise = currentAudio.play();
             if (playPromise !== undefined) {
                 playPromise.catch(function() { playFallbackTTS(text, shortLangCode, stopAnimation); });
@@ -666,16 +666,20 @@
         function playFallbackTTS(text, shortLangCode, onEndCallback) {
             if (!('speechSynthesis' in window)) { if (onEndCallback) onEndCallback(); return; }
             window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            const langMap = { 'fa': 'fa-IR', 'en': 'en-GB', 'ja': 'ja-JP', 'zh': 'zh-CN', 'de': 'de-DE', 'hi': 'hi-IN', 'es': 'es-ES', 'ar': 'ar-SA', 'ru': 'ru-RU' };
-            utterance.lang = langMap[shortLangCode] || shortLangCode;
-            utterance.rate = 0.85;
+            
+            currentUtterance = new SpeechSynthesisUtterance(text);
+            const langMap = { 'fa': 'fa-IR', 'en': 'en-US', 'ja': 'ja-JP', 'zh': 'zh-CN', 'de': 'de-DE', 'hi': 'hi-IN', 'es': 'es-ES', 'ar': 'ar-SA', 'ru': 'ru-RU' };
+            currentUtterance.lang = langMap[shortLangCode] || shortLangCode;
+            currentUtterance.rate = 0.85;
+            
             const voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices();
             const qualityVoice = voices.find(function(v) { return v.lang.startsWith(shortLangCode) && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Premium')); });
-            if (qualityVoice) utterance.voice = qualityVoice;
-            utterance.onend = onEndCallback;
-            utterance.onerror = onEndCallback;
-            window.speechSynthesis.speak(utterance);
+            if (qualityVoice) currentUtterance.voice = qualityVoice;
+            
+            currentUtterance.onend = function() { currentUtterance = null; if (onEndCallback) onEndCallback(); };
+            currentUtterance.onerror = function() { currentUtterance = null; if (onEndCallback) onEndCallback(); };
+            
+            window.speechSynthesis.speak(currentUtterance);
         }
 
         function playSfx(type) {
@@ -704,7 +708,7 @@
             const prev = LEVEL_THRESHOLDS[Math.max(0, level - 1)];
             const next = LEVEL_THRESHOLDS[Math.min(level, LEVEL_THRESHOLDS.length - 1)] || prev + 1000;
             const pct = Math.min(100, Math.max(0, ((state.score - prev) / (next - prev)) * 100));
-            document.getElementById('score-display').innerText = state.score;
+            document.getElementById('score-display').innerText = state.score.toLocaleString();
             document.getElementById('dash-level-header').innerText = level;
             document.getElementById('streak-display').innerText = state.streak;
             document.getElementById('xp-bar-fill').style.width = pct + '%';
@@ -734,7 +738,7 @@
         function validateDatabase(matrix) {
             if (!Array.isArray(matrix) || matrix.length === 0) return false;
             const validRows = matrix.filter(function(row) { return Array.isArray(row) && row.length >= 9; });
-            if (validRows.length < 4) return false;
+            if (validRows.length < 2) return false;
             dbMatrix = validRows;
             return true;
         }
@@ -761,10 +765,7 @@
             const isInitialized = dbMatrix.length > 0;
             if (isInitialized) {
                 document.getElementById('quiz-content').style.opacity = '0';
-                setTimeout(function() {
-                    document.getElementById('quiz-content').style.display = 'none';
-                    document.getElementById('inline-loader').style.display = 'flex';
-                }, 300);
+                document.getElementById('inline-loader').style.display = 'flex';
             } else {
                 showScreen('loading-screen');
                 document.getElementById('bottom-nav').style.display = 'none';
@@ -783,11 +784,16 @@
                     document.getElementById('loading-text').style.display = 'none';
                     document.getElementById('error-box').innerText = "Error fetching database: " + e.message;
                     document.getElementById('error-box').style.display = 'block';
+                } else {
+                    showToast("Failed to update database.");
                 }
                 isFetching = false;
                 return;
             } finally {
                 isFetching = false;
+                document.getElementById('inline-loader').style.display = 'none';
+                document.getElementById('quiz-content').style.display = 'flex';
+                setTimeout(function() { document.getElementById('quiz-content').style.opacity = '1'; }, 50);
             }
             document.getElementById('main-header').style.display = 'flex';
             document.getElementById('bottom-nav').style.display = 'flex';
@@ -796,9 +802,6 @@
             document.getElementById('nav-' + mode).classList.add('active');
             showScreen('quiz-screen');
             await loadQuestion();
-            document.getElementById('inline-loader').style.display = 'none';
-            document.getElementById('quiz-content').style.display = 'flex';
-            setTimeout(function() { document.getElementById('quiz-content').style.opacity = '1'; }, 50);
         }
 
         function triggerAnimation(elementId) {
@@ -892,9 +895,10 @@
             canAnswer = true;
             questionLoadTime = Date.now();
 
+            const m = state.mode;
             let pool = null;
             if (state.reviewMode === 'mistakes') {
-                pool = state.mistakeBank;
+                pool = state.mistakeBank[m];
                 if (!pool || pool.length === 0) {
                     showToast("No mistakes to review! Switching to Normal mode.");
                     state.reviewMode = 'normal'; saveState(); updateReviewChips(); pool = null;
@@ -914,8 +918,8 @@
             const srcCol = state.isReverseMode ? state.targetLang : state.sourceLang;
             const tgtCol = state.isReverseMode ? state.sourceLang : state.targetLang;
 
-            let correctOpt = (row[tgtCol] || "N/A").toString().replace(/\*/g, '');
-            let questionWord = (row[srcCol] || "N/A").toString();
+            let correctOpt = (row[tgtCol] || "N/A").toString().replace(/\*/g, '').trim();
+            let questionWord = (row[srcCol] || "N/A").toString().trim();
             currentRawTextForSpeech = questionWord.replace(/\*/g, '');
 
             const srcName = LANGUAGES.find(function(l) { return l.id === srcCol; }).name;
@@ -938,7 +942,7 @@
             while (wrongOpts.length < maxDistractors && safety < 1000) {
                 let r = Math.floor(Math.random() * dbMatrix.length);
                 if (r === currentWordIndex) { safety++; continue; }
-                let wOpt = (dbMatrix[r][tgtCol] || "").toString().replace(/\*/g, '');
+                let wOpt = (dbMatrix[r][tgtCol] || "").toString().replace(/\*/g, '').trim();
                 if (wOpt !== correctOpt && wrongOpts.indexOf(wOpt) === -1 && wOpt !== "") wrongOpts.push(wOpt);
                 safety++;
             }
@@ -977,7 +981,7 @@
                 state.streak++;
                 if (state.streak > state.bestStreak) state.bestStreak = state.streak;
                 state.totalCorrect++;
-                if (state.mistakeBank.indexOf(currentWordIndex) >= 0) recordCorrectForMistake(currentWordIndex);
+                if (state.mistakeBank[state.mode].indexOf(currentWordIndex) >= 0) recordCorrectForMistake(currentWordIndex);
                 let baseXP = (state.mode === 'sentence') ? XP_BASE_SENTENCE : XP_BASE_WORD;
                 let bonusMultiplier = Math.min(Math.floor(state.streak / 4) * 0.2, 1.0);
                 let finalXP = Math.round(baseXP * (1 + bonusMultiplier));
@@ -1015,40 +1019,43 @@
             playTTS(currentRawTextForSpeech, shortLang);
         }
 
-        // --- اصلاح ساختار دریافت اطلاعات از بک‌اند ---
         async function renderLeaderboard() {
             const container = document.getElementById('leaderboard-list');
             container.innerHTML = '<div style="display:flex; justify-content:center; padding:40px;"><div class="loader"></div></div>';
             
+            syncScoreToBackend();
+
             let users = [];
-            let myUserId = tgUser ? tgUser.id : 'local';
+            let myUserId = tgUser ? String(tgUser.id) : 'local';
 
             try {
                 const response = await fetch(API_URL + (API_URL.includes('?') ? '&' : '?') + 'action=getLeaderboard');
                 const data = await response.json();
                 
-                // در بک‌اند جدید ما، اطلاعات در data.data ارسال می‌شه
                 if (data && data.status === 'success' && Array.isArray(data.data)) {
                     users = data.data;
                 } else if (Array.isArray(data)) {
                     users = data;
-                } else if (data && data.leaderboard) {
-                    users = data.leaderboard;
                 }
             } catch (e) {
                 console.error("Leaderboard fetch error:", e);
             }
 
-            // اگه کاربر تو لیست اصلی نبود خودش رو به لیست اضافه کنه
-            if (!users || users.length === 0) {
-                users = [
-                    { userId: myUserId, username: getDisplayUsername(tgUser), xp: state.score, strikes: Math.max(state.streak, state.bestStreak) }
-                ];
-            }
+            if (!users || !Array.isArray(users)) users = [];
 
-            const exists = users.find(u => (u.userId || u.id) == myUserId);
-            if (!exists) {
-                users.push({ userId: myUserId, username: getDisplayUsername(tgUser), xp: state.score, strikes: Math.max(state.streak, state.bestStreak) });
+            let meInList = users.find(u => String(u.userId || u.id) === myUserId);
+            if (!meInList) {
+                users.push({ 
+                    userId: myUserId, 
+                    username: getDisplayUsername(tgUser), 
+                    xp: state.score, 
+                    strikes: Math.max(state.streak, state.bestStreak) 
+                });
+            } else {
+                if (state.score > (meInList.xp || 0)) meInList.xp = state.score;
+                if (Math.max(state.streak, state.bestStreak) > (meInList.strikes || 0)) {
+                    meInList.strikes = Math.max(state.streak, state.bestStreak);
+                }
             }
 
             container.innerHTML = '';
@@ -1062,11 +1069,11 @@
                 else if (rank === 2) { rankClass = 'silver'; rankIcon = '🥈'; }
                 else if (rank === 3) { rankClass = 'bronze'; rankIcon = '🥉'; }
                 
-                const uId = user.userId || user.id;
-                const uName = user.username || user.name || "Anonymous";
+                const uId = String(user.userId || user.id);
+                const uName = user.username || "Anonymous";
                 const uXp = user.xp !== undefined ? user.xp : 0;
                 const uStrikes = user.strikes !== undefined ? user.strikes : 0;
-                const isMe = (uId == myUserId);
+                const isMe = (uId === myUserId);
 
                 const item = document.createElement('div');
                 item.className = 'lb-item glass' + (isMe ? ' is-me' : '');
@@ -1087,7 +1094,7 @@
 
         function renderDashboard() {
             document.getElementById('dash-level').innerText = getLevel(state.score);
-            document.getElementById('dash-xp').innerText = state.score;
+            document.getElementById('dash-xp').innerText = state.score.toLocaleString();
             document.getElementById('dash-best-streak').innerText = state.bestStreak;
             const total = state.totalCorrect + state.totalWrong;
             document.getElementById('dash-accuracy').innerText = total > 0 ? Math.round((state.totalCorrect / total) * 100) + '%' : '0%';
@@ -1198,7 +1205,9 @@
         function resetLanguages() {
             clearTimeout(answerTimeoutId);
             state.sourceLang = null; state.targetLang = null;
-            state.srsData = {}; state.mistakeBank = []; state.mistakeStats = {};
+            state.srsData = { word: {}, sentence: {} }; 
+            state.mistakeBank = { word: [], sentence: [] }; 
+            state.mistakeStats = { word: {}, sentence: {} };
             localStorage.removeItem('sourceLang'); localStorage.removeItem('targetLang');
             toggleSettings(); startWizard();
         }
@@ -1208,9 +1217,10 @@
             state.totalCorrect = 0; state.totalWrong = 0; state.usageData = {};
             state.lives = MAX_LIVES; state.lastLifeUpdate = null;
             state.consecutiveDays = 0; state.lastLoginDate = null;
-            state.achievements = {}; state.srsData = {};
-            state.mistakeBank = []; state.mistakeStats = {};
+            state.achievements = {}; state.srsData = { word: {}, sentence: {} };
+            state.mistakeBank = { word: [], sentence: [] }; state.mistakeStats = { word: {}, sentence: {} };
             saveState(); updateXPUI(); updateHeartsUI(); toggleSettings();
+            syncScoreToBackend();
         }
 
         window.onload = function() {
@@ -1224,14 +1234,12 @@
                 }
             }
 
-            // Unlock audio on first user interaction (critical for mobile)
             ['touchstart', 'touchend', 'click'].forEach(function(evt) {
                 document.addEventListener(evt, unlockAudio, { once: true, passive: true });
             });
 
             document.addEventListener('visibilitychange', function() {
                 document.body.style.animationPlayState = document.hidden ? 'paused' : 'running';
-                // Resume audio context when user returns to the app
                 if (!document.hidden && sfxCtx && sfxCtx.state === 'suspended') {
                     sfxCtx.resume().catch(function(){});
                 }
