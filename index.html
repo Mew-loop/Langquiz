@@ -1299,6 +1299,7 @@
         let currentLeaderboardTab = 'global';
         let ttsRetryCount = 0;
 
+        // ─── AUDIO HELPERS ───
         function isMobileDevice() {
             return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
                 || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1310,20 +1311,16 @@
             audioReady = true;
             try {
                 if (!sfxCtx) sfxCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (sfxCtx && sfxCtx.state === 'suspended') {
-                    sfxCtx.resume().catch(function(){});
-                }
+                if (sfxCtx && sfxCtx.state === 'suspended') sfxCtx.resume().catch(function(){});
             } catch(e) {}
             try {
                 var silent = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==");
-                silent.volume = 0.001;
-                silent.play().catch(function(){});
+                silent.volume = 0.001; silent.play().catch(function(){});
             } catch(e) {}
             try {
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
-                    var u = new SpeechSynthesisUtterance('');
-                    u.volume = 0.001;
+                    var u = new SpeechSynthesisUtterance(''); u.volume = 0.001;
                     window.speechSynthesis.speak(u);
                 }
             } catch(e) {}
@@ -1331,55 +1328,45 @@
 
         function onFirstInteraction() {
             unlockAudio();
-            if (pendingTTS) {
-                var cb = pendingTTS;
-                pendingTTS = null;
-                setTimeout(function() { cb(); }, 50);
-            }
+            if (pendingTTS) { var cb = pendingTTS; pendingTTS = null; setTimeout(function() { cb(); }, 50); }
         }
 
+        // ─── UTILITY ───
         function getDisplayUsername(userObj) {
             if (!userObj) return "Learner";
-            let name = "";
-            if (userObj.first_name) { name = userObj.first_name; if (userObj.last_name) name += " " + userObj.last_name; }
-            else if (userObj.username) name = userObj.username;
-            else name = "Learner";
-            return name;
+            if (userObj.first_name) { var n = userObj.first_name; if (userObj.last_name) n += " " + userObj.last_name; return n; }
+            if (userObj.username) return userObj.username;
+            return "Learner";
         }
 
         function escapeHtml(text) {
             if (text == null) return "";
-            const div = document.createElement('div');
-            div.textContent = String(text);
-            return div.innerHTML;
+            var d = document.createElement('div'); d.textContent = String(text); return d.innerHTML;
         }
 
         function levenshtein(a, b) {
-            const matrix = [];
-            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-            for (let i = 1; i <= b.length; i++) {
-                for (let j = 1; j <= a.length; j++) {
-                    matrix[i][j] = b.charAt(i-1) === a.charAt(j-1) ? matrix[i-1][j-1] : Math.min(matrix[i-1][j-1] + 1, Math.min(matrix[i][j-1] + 1, matrix[i-1][j] + 1));
-                }
-            }
-            return matrix[b.length][a.length];
+            var m = []; for (var i = 0; i <= b.length; i++) m[i] = [i]; for (var j = 0; j <= a.length; j++) m[0][j] = j;
+            for (var i = 1; i <= b.length; i++) for (var j = 1; j <= a.length; j++)
+                m[i][j] = b.charAt(i-1) === a.charAt(j-1) ? m[i-1][j-1] : Math.min(m[i-1][j-1]+1, m[i][j-1]+1, m[i-1][j]);
+            return m[b.length][a.length];
         }
 
+        // [FIX] Answer validation: case-insensitive, trimmed, punctuation-stripped, with Levenshtein tolerance
         function isAnswerCorrect(input, correct) {
-            const inputNorm = input.toLowerCase().trim().replace(/[.,!?;:\/]/g, '');
-            const correctNorm = correct.toLowerCase().trim().replace(/[.,!?;:\/]/g, '');
+            var inputNorm = input.toLowerCase().trim().replace(/[.,!?;:\/'"\-]/g, '');
+            var correctNorm = correct.toLowerCase().trim().replace(/[.,!?;:\/'"\-]/g, '');
             if (inputNorm === correctNorm) return true;
-            const dist = levenshtein(inputNorm, correctNorm);
-            const threshold = Math.max(1, Math.floor(correctNorm.length * 0.15));
+            var dist = levenshtein(inputNorm, correctNorm);
+            var threshold = Math.max(1, Math.floor(correctNorm.length * 0.15));
             return dist <= threshold;
         }
 
         function getLevel(xp) {
-            for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) { if (xp >= LEVEL_THRESHOLDS[i]) return i + 1; }
+            for (var i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) { if (xp >= LEVEL_THRESHOLDS[i]) return i + 1; }
             return 1;
         }
 
+        // ─── LIVES ───
         function getCurrentLives() {
             var lives = Number(state.lives) || 0;
             if (lives >= MAX_LIVES) return MAX_LIVES;
@@ -1391,23 +1378,15 @@
 
         function loseLife() {
             var current = getCurrentLives();
-            if (current > 0) {
-                state.lives = current - 1;
-                state.lastLifeUpdate = Date.now();
-                saveState();
-            }
+            if (current > 0) { state.lives = current - 1; state.lastLifeUpdate = Date.now(); saveState(); }
         }
 
         function updateHeartsUI() {
-            const lives = getCurrentLives();
-            const heartsRow = document.getElementById('hearts-row');
-            if (!heartsRow) return;
-            heartsRow.innerHTML = '';
-            for (let i = 0; i < MAX_LIVES; i++) {
-                const span = document.createElement('span');
-                span.className = 'heart' + (i < lives ? ' active' : '');
-                span.innerText = '❤️';
-                heartsRow.appendChild(span);
+            var lives = getCurrentLives();
+            var row = document.getElementById('hearts-row'); if (!row) return;
+            row.innerHTML = '';
+            for (var i = 0; i < MAX_LIVES; i++) {
+                var s = document.createElement('span'); s.className = 'heart' + (i < lives ? ' active' : ''); s.innerText = '❤️'; row.appendChild(s);
             }
         }
 
@@ -1424,50 +1403,46 @@
         }
 
         function updateHeartTimer() {
-            const lives = getCurrentLives();
+            var lives = getCurrentLives();
             if (lives > 0) { hideOutOfHearts(); loadQuestion(); return; }
-            const nextHeartIn = HEART_REGEN_MS - ((Date.now() - state.lastLifeUpdate) % HEART_REGEN_MS);
-            const mins = Math.floor(nextHeartIn / 60000);
-            const secs = Math.floor((nextHeartIn % 60000) / 1000);
-            document.getElementById('hearts-timer').innerText = mins + ':' + secs.toString().padStart(2,'0');
+            var next = HEART_REGEN_MS - ((Date.now() - state.lastLifeUpdate) % HEART_REGEN_MS);
+            var m = Math.floor(next / 60000), s = Math.floor((next % 60000) / 1000);
+            document.getElementById('hearts-timer').innerText = m + ':' + s.toString().padStart(2, '0');
         }
 
+        // ─── STREAK ───
         function checkDailyStreak() {
-            const today = new Date().toISOString().split('T')[0];
-            const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+            var today = new Date().toISOString().split('T')[0];
+            var yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
             if (state.lastLoginDate === today) return;
-            let streakBroken = false;
+            var broken = false;
             if (state.lastLoginDate === yesterday) state.consecutiveDays++;
             else if (state.lastLoginDate) {
-                if (state.streakFreezes > 0) { state.streakFreezes--; state.consecutiveDays++; showToast('❄️ Streak Freeze used! Your streak is safe.', 4000); }
-                else { state.consecutiveDays = 1; streakBroken = true; }
+                if (state.streakFreezes > 0) { state.streakFreezes--; state.consecutiveDays++; showToast('❄️ Streak Freeze used!', 4000); }
+                else { state.consecutiveDays = 1; broken = true; }
             } else state.consecutiveDays = 1;
             state.lastLoginDate = today;
             if (state.consecutiveDays > 0 && state.consecutiveDays % 7 === 0) { state.streakFreezes++; showToast('❄️ Free Streak Freeze earned!', 3000); }
-            const milestones = {3: 50, 7: 150, 14: 400, 30: 1000};
-            const bonus = milestones[state.consecutiveDays];
-            if (bonus) { state.score += bonus; showToast('🔥 ' + state.consecutiveDays + '-Day Streak! +' + bonus + ' XP Bonus!', 4000); }
-            else if (!streakBroken && state.consecutiveDays > 1) showToast('🔥 ' + state.consecutiveDays + '-Day Streak! Keep it up!', 3000);
-            else if (streakBroken) showToast('💔 Streak broken! Start a new streak today.', 4000);
+            var ms = {3:50, 7:150, 14:400, 30:1000};
+            var bonus = ms[state.consecutiveDays];
+            if (bonus) { state.score += bonus; showToast('🔥 ' + state.consecutiveDays + '-Day Streak! +' + bonus + ' XP!', 4000); }
+            else if (!broken && state.consecutiveDays > 1) showToast('🔥 ' + state.consecutiveDays + '-Day Streak!', 3000);
+            else if (broken) showToast('💔 Streak broken!', 4000);
             saveState();
         }
 
+        // ─── ACHIEVEMENTS ───
         function unlockAchievement(id) {
             if (state.achievements[id]) return;
-            const ach = ACHIEVEMENTS[id];
-            if (!ach) return;
-            state.achievements[id] = Date.now();
-            saveState();
-            showToast('🎖️ Unlocked: ' + ach.name + '!', 4000);
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
-                window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-            }
+            var ach = ACHIEVEMENTS[id]; if (!ach) return;
+            state.achievements[id] = Date.now(); saveState();
+            showToast('🎖️ ' + ach.name + '!', 4000);
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
         }
 
         function checkAchievements(ctx) {
-            const now = new Date();
-            const hour = now.getHours();
-            if (hour >= 0 && hour < 5) unlockAchievement('nightOwl');
+            var h = new Date().getHours();
+            if (h >= 0 && h < 5) unlockAchievement('nightOwl');
             if (ctx.answerTime < 2000) unlockAchievement('speedDemon');
             if (state.streak >= 50) unlockAchievement('perfectionist');
             if (state.totalCorrect === 1) unlockAchievement('firstBlood');
@@ -1477,11 +1452,773 @@
         }
 
         function renderAchievements() {
-            const grid = document.getElementById('achievement-grid');
-            if (!grid) return;
-            grid.innerHTML = '';
-            Object.values(ACHIEVEMENTS).forEach(ach => {
-                const unlocked = !!state.achievements[ach.id];
-                const item = document.createElement('div');
-                item.className = 'achievement-item' + (unlocked ? ' unlocked' : '');
-                item.innerHTML = '<div class="achievement-icon">' + ach.icon + '</div><div class="achievement-info"><span class="achievement-name">' + ach.name + '</span><span class="achievement-desc">' + ach.desc
+            var grid = document.getElementById('achievement-grid'); if (!grid) return; grid.innerHTML = '';
+            Object.values(ACHIEVEMENTS).forEach(function(ach) {
+                var u = !!state.achievements[ach.id];
+                var item = document.createElement('div'); item.className = 'achievement-item' + (u ? ' unlocked' : '');
+                item.innerHTML = '<div class="achievement-icon">' + ach.icon + '</div><div class="achievement-info"><span class="achievement-name">' + ach.name + '</span><span class="achievement-desc">' + ach.desc + '</span></div>';
+                grid.appendChild(item);
+            });
+        }
+
+        // ─── SRS ───
+        function updateSRS(wordIndex, isCorrect) {
+            var day = 86400000;
+            var card = state.srsData[wordIndex] || { interval: 0, repetitions: 0, ef: 2.5, nextReview: 0 };
+            if (isCorrect) {
+                card.repetitions++;
+                if (card.repetitions === 1) card.interval = 1;
+                else if (card.repetitions === 2) card.interval = 6;
+                else card.interval = Math.round(card.interval * card.ef);
+                card.ef = Math.max(1.3, card.ef + 0.1);
+            } else { card.repetitions = 0; card.interval = 1; card.ef = Math.max(1.3, card.ef - 0.2); }
+            card.nextReview = Date.now() + (card.interval * day);
+            state.srsData[wordIndex] = card;
+        }
+
+        function getNextSRSWord() {
+            var now = Date.now();
+            var due = Object.keys(state.srsData).map(Number).filter(function(i) { return state.srsData[i].nextReview <= now && i < dbMatrix.length; });
+            return due.length > 0 ? due[Math.floor(Math.random() * due.length)] : -1;
+        }
+
+        function addToMistakeBank(idx) {
+            if (!state.mistakeBank.includes(idx)) { state.mistakeBank.push(idx); state.mistakeStats[idx] = 0; saveState(); }
+        }
+
+        function recordCorrectForMistake(idx) {
+            if (!state.mistakeBank.includes(idx)) return;
+            state.mistakeStats[idx] = (state.mistakeStats[idx] || 0) + 1;
+            if (state.mistakeStats[idx] >= 3) { state.mistakeBank = state.mistakeBank.filter(function(i) { return i !== idx; }); delete state.mistakeStats[idx]; showToast('✅ Mistake mastered!', 3000); }
+            saveState();
+        }
+
+        // ─── REVIEW CHIPS ───
+        function setReviewMode(mode) { state.reviewMode = mode; saveState(); updateReviewChips(); loadQuestion(); }
+        function updateReviewChips() {
+            document.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
+            var active = document.querySelector('.chip[data-mode="' + state.reviewMode + '"]');
+            if (active) active.classList.add('active');
+        }
+
+        // ─── TOAST ───
+        function showToast(msg, dur) {
+            dur = dur || 2500;
+            var t = document.getElementById('app-toast');
+            if (!t) { t = document.createElement('div'); t.id = 'app-toast'; t.className = 'toast'; document.body.appendChild(t); }
+            t.innerText = msg; t.classList.add('show');
+            setTimeout(function() { t.classList.remove('show'); }, dur);
+        }
+
+        // ─── TTS ───
+        function updateVoices() { if ('speechSynthesis' in window) cachedVoices = window.speechSynthesis.getVoices(); }
+        if ('speechSynthesis' in window) { window.speechSynthesis.onvoiceschanged = updateVoices; updateVoices(); }
+
+        function playTTS(text, code) {
+            if (!state.ttsOn || !text) return;
+            if (!audioReady) { if (!pendingTTS) pendingTTS = function() { playTTS(text, code); }; return; }
+            var btn = document.getElementById('speaker-btn'); if (btn) btn.classList.add('playing');
+            if (currentAudio) { try { currentAudio.pause(); } catch(e){} currentAudio.onended = null; currentAudio.onerror = null; currentAudio = null; }
+            try { window.speechSynthesis.cancel(); } catch(e) {}
+            var stop = function() { try { if (btn) btn.classList.remove('playing'); } catch(e) {} };
+            if (text.length > 150 || state.mode === 'sentence' || isMobileDevice()) { playFallbackTTS(text, code, stop); return; }
+            var url = 'https://translate.google.com/translate_tts?ie=UTF-8&client=gtx&tl=' + code + '&q=' + encodeURIComponent(text);
+            currentAudio = new Audio(url);
+            currentAudio.onended = function() { currentAudio = null; stop(); };
+            currentAudio.onerror = function() { currentAudio = null; playFallbackTTS(text, code, stop); };
+            try { var p = currentAudio.play(); if (p !== undefined) p.catch(function() { if (currentAudio) currentAudio = null; playFallbackTTS(text, code, stop); }); } catch(e) { playFallbackTTS(text, code, stop); }
+        }
+
+        function playFallbackTTS(text, code, cb) {
+            if (!('speechSynthesis' in window)) { if (cb) cb(); return; }
+            try { window.speechSynthesis.cancel(); } catch(e) {}
+            var u = new SpeechSynthesisUtterance(text);
+            var map = { 'fa':'fa-IR', 'en':'en-GB', 'ja':'ja-JP', 'zh':'zh-CN', 'de':'de-DE', 'hi':'hi-IN', 'es':'es-ES', 'ar':'ar-SA', 'ru':'ru-RU' };
+            u.lang = map[code] || code; u.rate = 0.9;
+            var voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices();
+            var v = voices.find(function(v) { return v.lang && v.lang.startsWith(code); });
+            if (v) u.voice = v;
+            var done = false; var safe = function() { if (done) return; done = true; if (cb) cb(); };
+            u.onend = safe; u.onerror = safe;
+            try { window.speechSynthesis.speak(u); } catch(e) { safe(); }
+        }
+
+        function playSfx(type) {
+            if (!state.soundOn) return;
+            try {
+                if (!sfxCtx) sfxCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (sfxCtx.state === 'suspended') sfxCtx.resume().catch(function(){});
+                if (sfxCtx.state !== 'running') return;
+                var o = sfxCtx.createOscillator(), g = sfxCtx.createGain(); o.connect(g); g.connect(sfxCtx.destination);
+                var t = sfxCtx.currentTime;
+                if (type === 'correct') { o.type='sine'; o.frequency.setValueAtTime(500,t); o.frequency.exponentialRampToValueAtTime(1000,t+0.1); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.2); o.start(t); o.stop(t+0.2); }
+                else { o.type='sawtooth'; o.frequency.setValueAtTime(300,t); o.frequency.exponentialRampToValueAtTime(150,t+0.2); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.3); o.start(t); o.stop(t+0.3); }
+            } catch(e) {}
+        }
+
+        // ─── XP UI ───
+        function updateXPUI() {
+            var level = getLevel(state.score);
+            var prev = LEVEL_THRESHOLDS[Math.max(0, level-1)], next = LEVEL_THRESHOLDS[level] || (prev+1000);
+            var pct = next===prev ? 100 : Math.min(100, Math.max(0, ((state.score-prev)/(next-prev))*100));
+            document.getElementById('score-display').innerText = state.score;
+            document.getElementById('dash-level-header').innerText = level;
+            document.getElementById('streak-display').innerText = state.streak;
+            document.getElementById('xp-bar-fill').style.width = pct + '%';
+            var badge = document.getElementById('bonus-badge');
+            var bm = Math.min(Math.floor(state.streak/4)*0.2, 1.0);
+            if (bm > 0) { badge.innerText = '+' + (bm*100) + '%'; badge.style.display = 'inline-block'; }
+            else badge.style.display = 'none';
+            var fz = document.getElementById('freeze-badge');
+            if (fz) { if (state.streakFreezes > 0) { fz.innerText = '❄️ ' + state.streakFreezes; fz.style.display = 'inline-block'; } else fz.style.display = 'none'; }
+        }
+
+        // ─── STATE ───
+        function saveState() {
+            for (var k in state) localStorage.setItem(LS_PREFIX + k, typeof state[k] === 'object' ? JSON.stringify(state[k]) : state[k]);
+        }
+
+        function loadState() {
+            var defs = { score:0, streak:0, bestStreak:0, sourceLang:null, targetLang:null, soundOn:true, ttsOn:true, mode:'word',
+                totalCorrect:0, totalWrong:0, usageData:{}, lives:MAX_LIVES, lastLifeUpdate:null, consecutiveDays:0, lastLoginDate:null,
+                achievements:{}, srsData:{}, mistakeBank:[], mistakeStats:{}, langSwitches:0, isReverseMode:false, isListeningMode:false,
+                reviewMode:'normal', typingMode:false, favorites:[], dailyQuests:{date:null,quests:[]}, streakFreezes:0, syncQueue:[],
+                sessionStats:{count:0,correct:0,wrong:0,missedWords:[]}, lastKnownLevel:1, referralCode:null };
+            var s = {};
+            for (var k in defs) { var v = localStorage.getItem(LS_PREFIX + k); if (v !== null) { try { s[k] = JSON.parse(v); } catch(e) { s[k] = v; } } else s[k] = defs[k]; }
+            s.score = parseInt(s.score)||0; s.streak = parseInt(s.streak)||0; s.bestStreak = parseInt(s.bestStreak)||0;
+            s.lives = parseInt(s.lives)||MAX_LIVES; s.consecutiveDays = parseInt(s.consecutiveDays)||0;
+            s.langSwitches = parseInt(s.langSwitches)||0; s.streakFreezes = parseInt(s.streakFreezes)||0;
+            s.lastKnownLevel = parseInt(s.lastKnownLevel)||1;
+            if (!s.usageData) s.usageData={}; if (!s.achievements) s.achievements={}; if (!s.srsData) s.srsData={};
+            if (!s.mistakeBank) s.mistakeBank=[]; if (!s.mistakeStats) s.mistakeStats={}; if (!s.favorites) s.favorites=[];
+            if (!s.dailyQuests) s.dailyQuests={date:null,quests:[]}; if (!s.syncQueue) s.syncQueue=[];
+            if (!s.sessionStats) s.sessionStats={count:0,correct:0,wrong:0,missedWords:[]};
+            if (s.lives < MAX_LIVES && s.lastLifeUpdate) {
+                var now = Date.now(), elapsed = now - s.lastLifeUpdate, reg = Math.floor(elapsed / HEART_REGEN_MS);
+                s.lives = Math.min(MAX_LIVES, s.lives + reg);
+                if (s.lives < MAX_LIVES) s.lastLifeUpdate = now - (elapsed % HEART_REGEN_MS); else s.lastLifeUpdate = null;
+            }
+            return s;
+        }
+
+        var state = loadState();
+        lastKnownLevel = state.lastKnownLevel || 1;
+
+        function trackUsage() {
+            var now = new Date(), mk = now.getFullYear() + '-' + now.getMonth(), dk = now.getDate();
+            if (!state.usageData[mk]) state.usageData[mk] = [];
+            if (!state.usageData[mk].includes(dk)) { state.usageData[mk].push(dk); saveState(); }
+        }
+
+        // [FIX] validateDatabase — now returns false if empty, no hardcoded fallback
+        function validateDatabase(matrix) {
+            if (!Array.isArray(matrix) || matrix.length === 0) return false;
+            var valid = matrix.filter(function(row) {
+                return Array.isArray(row) && row.length >= 9 && row.some(function(c) { return c && String(c).trim() !== ""; });
+            });
+            if (valid.length < 4) return false;
+            dbMatrix = valid;
+            return true;
+        }
+
+        // ─── DAILY QUESTS ───
+        function initDailyQuests() {
+            var today = new Date().toISOString().split('T')[0];
+            if (state.dailyQuests.date === today) return;
+            state.dailyQuests.date = today;
+            state.dailyQuests.quests = [
+                { id:'answer20', name:'Answer 20 questions', target:20, current:0, completed:false, reward:50 },
+                { id:'streak10', name:'Get a 10-streak', target:10, current:0, completed:false, reward:100 },
+                { id:'review5', name:'Review 5 mistakes', target:5, current:0, completed:false, reward:75 }
+            ];
+            saveState();
+        }
+
+        function updateQuestProgress(action, value) {
+            if (!state.dailyQuests.quests) return;
+            var updated = false;
+            state.dailyQuests.quests.forEach(function(q) {
+                if (q.completed) return;
+                if (action==='answer' && q.id==='answer20') q.current = Math.min(q.target, q.current+(value||1));
+                else if (action==='streak' && q.id==='streak10') q.current = Math.min(q.target, value||q.current);
+                else if (action==='review' && q.id==='review5') q.current = Math.min(q.target, q.current+(value||1));
+                if (q.current >= q.target && !q.completed) { q.completed = true; state.score += q.reward; showToast('🎯 ' + q.name + '! +' + q.reward + ' XP', 4000); updated = true; }
+            });
+            if (updated) saveState();
+        }
+
+        function renderDailyQuests() {
+            var c = document.getElementById('quest-list'); if (!c) return; c.innerHTML = '';
+            if (!state.dailyQuests.quests || !state.dailyQuests.quests.length) { c.innerHTML = '<div style="color:var(--tg-hint);font-size:13px;text-align:center;">No active quests</div>'; return; }
+            state.dailyQuests.quests.forEach(function(q) {
+                var item = document.createElement('div'); item.className = 'quest-item' + (q.completed ? ' completed' : '');
+                var pct = (q.current / q.target) * 100;
+                item.innerHTML = '<div style="flex:1;"><div style="font-size:13px;font-weight:600;">' + q.name + '</div><div class="quest-progress"><div class="quest-progress-fill" style="width:' + pct + '%;"></div></div></div><div style="font-size:12px;color:var(--tg-hint);white-space:nowrap;margin-left:10px;">' + q.current + '/' + q.target + '</div>';
+                c.appendChild(item);
+            });
+        }
+
+        // ─── SESSION SUMMARY ───
+        function checkSessionSummary() { if (state.sessionStats.count > 0 && state.sessionStats.count % 10 === 0) showSessionSummary(); }
+        function showSessionSummary() {
+            var o = document.getElementById('session-summary-overlay');
+            document.getElementById('ss-correct').innerText = state.sessionStats.correct;
+            document.getElementById('ss-wrong').innerText = state.sessionStats.wrong;
+            var mc = document.getElementById('ss-missed-words');
+            if (state.sessionStats.missedWords.length > 0) {
+                mc.innerHTML = '<div style="font-size:12px;color:var(--tg-hint);margin-bottom:8px;">Words to review:</div>' + state.sessionStats.missedWords.slice(-5).map(function(w) { return '<div style="font-size:13px;padding:4px 0;border-bottom:1px solid var(--border);">' + escapeHtml(w.question) + ' → ' + escapeHtml(w.answer) + '</div>'; }).join('');
+            } else mc.innerHTML = '<div style="font-size:13px;color:var(--accent-green);">Perfect session!</div>';
+            o.style.display = 'flex';
+        }
+        function hideSessionSummary() { document.getElementById('session-summary-overlay').style.display = 'none'; state.sessionStats.missedWords = []; saveState(); }
+
+        // ─── LEVEL UP ───
+        function checkLevelUp() {
+            var cl = getLevel(state.score);
+            if (cl > lastKnownLevel) {
+                lastKnownLevel = cl; state.lastKnownLevel = cl; saveState();
+                launchConfetti(); showToast('🎉 Level ' + cl + '!', 5000);
+                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                try {
+                    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.shareToStory) {
+                        var txt = '🎉 Level ' + cl + '! ' + state.score.toLocaleString() + ' XP';
+                        var ref = getReferralCode(); if (ref) txt += '\nCode: ' + ref;
+                        window.Telegram.WebApp.shareToStory(txt);
+                    }
+                } catch(e) {}
+            }
+        }
+
+        function launchConfetti() {
+            var c = document.getElementById('confetti-canvas'), ctx = c.getContext('2d');
+            c.width = window.innerWidth; c.height = window.innerHeight; c.style.display = 'block';
+            var ps = [], colors = ['#6366f1','#f59e0b','#22c55e','#ef4444','#a855f7','#06b6d4'];
+            for (var i = 0; i < 100; i++) ps.push({ x:c.width/2, y:c.height/2, vx:(Math.random()-0.5)*12, vy:(Math.random()-0.5)*12-4, c:colors[Math.floor(Math.random()*colors.length)], s:Math.random()*8+4, r:Math.random()*360, rs:(Math.random()-0.5)*10, g:0.15, d:0.98 });
+            var id;
+            function anim() {
+                ctx.clearRect(0,0,c.width,c.height); var live = false;
+                ps.forEach(function(p) { p.x+=p.vx; p.y+=p.vy; p.vy+=p.g; p.vx*=p.d; p.vy*=p.d; p.r+=p.rs; if (p.y<c.height+20&&p.s>0.5) live=true; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r*Math.PI/180); ctx.fillStyle=p.c; ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s); ctx.restore(); });
+                if (live) id = requestAnimationFrame(anim); else c.style.display = 'none';
+            }
+            anim(); setTimeout(function() { cancelAnimationFrame(id); c.style.display = 'none'; }, 4000);
+        }
+
+        // ─── FAVORITES ───
+        function toggleFavorite() {
+            if (currentWordIndex < 0 || currentWordIndex >= dbMatrix.length) return;
+            var idx = state.favorites.indexOf(currentWordIndex), btn = document.getElementById('star-btn');
+            if (idx >= 0) { state.favorites.splice(idx, 1); if (btn) btn.classList.remove('active'); showToast('Removed', 2000); }
+            else { state.favorites.push(currentWordIndex); if (btn) btn.classList.add('active'); showToast('Added ⭐', 2000); }
+            saveState();
+        }
+        function isFavorite(idx) { return state.favorites.includes(idx); }
+        function updateStarButton() { var b = document.getElementById('star-btn'); if (!b) return; if (isFavorite(currentWordIndex)) b.classList.add('active'); else b.classList.remove('active'); }
+
+        // ─── TYPING MODE ───
+        function toggleTypingMode() {
+            state.typingMode = !state.typingMode; saveState();
+            document.getElementById('typing-toggle').innerHTML = '<span class="s-icon">⌨️</span><span>Typing: ' + (state.typingMode ? 'ON' : 'OFF') + '</span>';
+            if (currentScreen === 'quiz') loadQuestion();
+        }
+
+        function submitTypedAnswer() {
+            if (!canAnswer) return;
+            var input = document.getElementById('typing-input');
+            var typed = input ? input.value : '';
+            if (!typed.trim()) return;
+            var row = dbMatrix[currentWordIndex];
+            var tgtCol = state.isReverseMode ? state.sourceLang : state.targetLang;
+            // [FIX] Strip asterisks from correct answer before comparison
+            var correct = (row[tgtCol] || "N/A").toString().replace(/\*/g, '');
+            // [FIX] Use isAnswerCorrect which applies toLowerCase().trim() to BOTH strings
+            var isCorrect = isAnswerCorrect(typed, correct);
+            handleAnswerResult(isCorrect, correct, Date.now() - questionLoadTime);
+            if (input) input.value = '';
+        }
+
+        // ─── REFERRAL ───
+        function getReferralCode() {
+            if (!tgUser) return null;
+            if (!state.referralCode) { state.referralCode = 'REF' + String(tgUser.id); saveState(); }
+            return state.referralCode;
+        }
+        function shareReferral() {
+            var code = getReferralCode();
+            if (!code) { showToast('Login required', 3000); return; }
+            var text = 'Join me on LangQuiz Pro! Code: ' + code + ' 🔥';
+            var url = 'https://t.me/share/url?url=&text=' + encodeURIComponent(text);
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) window.Telegram.WebApp.openTelegramLink(url);
+            else window.open(url, '_blank');
+        }
+
+        function switchLeaderboardTab(tab) {
+            currentLeaderboardTab = tab;
+            document.querySelectorAll('.lb-tab').forEach(function(t) { t.classList.remove('active'); });
+            document.getElementById('lb-tab-' + tab).classList.add('active');
+            renderLeaderboard();
+        }
+
+        // ─── SRS DASHBOARD ───
+        function renderSRSDashboard() {
+            var c = document.getElementById('srs-dashboard'); if (!c) return;
+            var now = Date.now();
+            var dueNow = Object.keys(state.srsData).map(Number).filter(function(i) { return state.srsData[i].nextReview <= now && i < dbMatrix.length; }).length;
+            var dueToday = Object.keys(state.srsData).map(Number).filter(function(i) { return state.srsData[i].nextReview <= now+86400000 && i < dbMatrix.length; }).length;
+            var mastered = Object.keys(state.srsData).map(Number).filter(function(i) { return state.srsData[i].repetitions >= 3; }).length;
+            var learning = Object.keys(state.srsData).length - mastered;
+            var nxt = 'No reviews due';
+            var future = Object.values(state.srsData).filter(function(c) { return c.nextReview > now; });
+            if (future.length > 0) {
+                var nt = Math.min.apply(null, future.map(function(c) { return c.nextReview; }));
+                var mins = Math.ceil((nt - now) / 60000);
+                nxt = mins < 60 ? 'Next in ' + mins + ' min' : 'Next in ' + Math.ceil(mins/60) + ' hr';
+            }
+            c.innerHTML = '';
+            [{l:'Due Now',v:dueNow,c:'var(--accent-red)'},{l:'Due Today',v:dueToday,c:'var(--accent-gold)'},{l:'Learning',v:learning,c:'var(--tg-link)'},{l:'Mastered',v:mastered,c:'var(--accent-green)'}].forEach(function(it) {
+                var d = document.createElement('div'); d.className = 'srs-item';
+                d.innerHTML = '<span style="font-size:13px;color:var(--tg-hint);">' + it.l + '</span><span style="font-size:18px;font-weight:700;color:' + it.c + ';">' + it.v + '</span>';
+                c.appendChild(d);
+            });
+            var nd = document.createElement('div'); nd.className = 'srs-item';
+            nd.innerHTML = '<span style="font-size:13px;color:var(--tg-hint);">Next Review</span><span style="font-size:13px;font-weight:600;">' + nxt + '</span>';
+            c.appendChild(nd);
+        }
+
+        function startSRSReview() {
+            var now = Date.now();
+            var due = Object.keys(state.srsData).map(Number).filter(function(i) { return state.srsData[i].nextReview <= now && i < dbMatrix.length; }).length;
+            if (due === 0) { showToast('✅ Nothing due!', 3000); return; }
+            state.reviewMode = 'srs'; saveState();
+            if (currentScreen !== 'quiz') toggleScreen('quiz');
+            else { updateReviewChips(); loadQuestion(); }
+            showToast('🔄 ' + due + ' items due', 3000);
+        }
+
+        // ─── OFFLINE SYNC ───
+        function queueFailedSync(p) { state.syncQueue.push({payload:p, time:Date.now()}); if (state.syncQueue.length > 20) state.syncQueue = state.syncQueue.slice(-20); saveState(); }
+        function processSyncQueue() {
+            if (!state.syncQueue || !state.syncQueue.length || !tgUser) return;
+            var q = state.syncQueue.slice(); state.syncQueue = []; saveState();
+            q.forEach(function(it) { syncPayload(it.payload); });
+        }
+        function syncPayload(p) {
+            try {
+                fetch(API_URL, { method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(p) })
+                .then(function(r) { if (!r.ok) throw new Error('Sync:'+r.status); return r.text(); })
+                .then(function(t) { if (t.trim().startsWith('<')) throw new Error('HTML response'); })
+                .catch(function(e) { console.warn('Sync failed:', e); queueFailedSync(p); });
+            } catch(e) { queueFailedSync(p); }
+        }
+        function syncScoreToBackend() {
+            if (!tgUser) return;
+            syncPayload({ action:'updateScoreFull', userId:tgUser.id, username:getDisplayUsername(tgUser), xp:state.score, streak:Math.max(state.streak,state.bestStreak), referralCode:getReferralCode(), lastLoginDate:state.lastLoginDate, streakFreeze:state.streakFreezes });
+        }
+
+        // ─── FETCH WITH TIMEOUT ───
+        async function fetchWithTimeout(url, opts, ms) {
+            ms = ms || 10000; var ctrl = new AbortController(); var tid = setTimeout(function() { ctrl.abort(); }, ms);
+            try { var r = await fetch(url, Object.assign({}, opts, {signal:ctrl.signal})); clearTimeout(tid); return r; }
+            catch(e) { clearTimeout(tid); throw e; }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // [FIX] fetchDatabase — NO hardcoded fallback; shows loading state on failure
+        // ═══════════════════════════════════════════════════════════════
+        async function fetchDatabase(mode) {
+            if (isFetching && currentFetchController) { currentFetchController.abort(); await new Promise(function(r) { setTimeout(r, 50); }); }
+            var isInit = dbMatrix.length > 0;
+            if (isInit) {
+                document.getElementById('quiz-content').style.opacity = '0';
+                setTimeout(function() { document.getElementById('quiz-content').style.display = 'none'; document.getElementById('inline-loader').style.display = 'flex'; }, 300);
+            } else {
+                showScreen('loading-screen');
+                document.getElementById('bottom-nav').style.display = 'none';
+                document.getElementById('main-header').style.display = 'none';
+            }
+            isFetching = true; currentFetchController = new AbortController();
+            // [FIX] No fallback variable — Google Sheet is the only data source
+            try {
+                var response = await fetchWithTimeout(API_URL + (API_URL.includes('?') ? '&' : '?') + 'mode=' + mode, { signal: currentFetchController.signal, redirect: 'follow' }, 15000);
+                var responseText = await response.text();
+                if (responseText.trim().startsWith('<') || responseText.trim().startsWith('<!')) throw new Error("Server returned HTML. Check deployment.");
+                var data; try { data = JSON.parse(responseText); } catch(pe) { throw new Error("Invalid JSON: " + responseText.substring(0, 80)); }
+                if (!validateDatabase(data)) throw new Error("Invalid database format from sheet.");
+            } catch(e) {
+                if (e.name === 'AbortError') { isFetching = false; return; }
+                console.warn("Fetch Error:", e);
+                // [FIX] No fallback — show error state, stay on loading screen
+                if (!isInit) {
+                    document.getElementById('loading-text').style.display = 'none';
+                    document.getElementById('error-box').innerHTML = '<b>Could not load data</b><br><br>' + escapeHtml(e.message) + '<br><br><small>Make sure your Google Sheet has "word_1" and "sentence_1" tabs with valid data, and the Apps Script is deployed as "Anyone".</small>';
+                    document.getElementById('error-box').style.display = 'block';
+                }
+                isFetching = false; return;
+            } finally { isFetching = false; }
+            document.getElementById('main-header').style.display = 'flex';
+            document.getElementById('bottom-nav').style.display = 'flex';
+            currentScreen = 'quiz';
+            document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
+            document.getElementById('nav-' + mode).classList.add('active');
+            showScreen('quiz-screen');
+            await loadQuestion();
+            document.getElementById('inline-loader').style.display = 'none';
+            document.getElementById('quiz-content').style.display = 'flex';
+            setTimeout(function() { document.getElementById('quiz-content').style.opacity = '1'; }, 50);
+        }
+
+        // ─── NAV / SCREEN ───
+        function triggerAnimation(id) { var el = document.getElementById(id); if (el) { el.classList.remove('animate-up'); void el.offsetWidth; el.classList.add('animate-up'); } }
+
+        function switchMode(newMode) {
+            if (modeSwitchDebounce) return;
+            modeSwitchDebounce = setTimeout(function() { modeSwitchDebounce = null; }, 500);
+            if (state.mode === newMode && currentScreen === 'quiz') return;
+            state.mode = newMode;
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            if (currentScreen !== 'quiz') showScreen('quiz-screen'); else triggerAnimation('quiz-wrapper');
+            document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
+            document.getElementById('nav-' + newMode).classList.add('active');
+            fetchDatabase(newMode);
+        }
+
+        function toggleScreen(target) {
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
+            if (currentScreen === 'quiz' && (target === 'dashboard' || target === 'leaderboard')) syncScoreToBackend();
+            if (currentScreen === target) {
+                currentScreen = 'quiz'; document.getElementById('nav-' + state.mode).classList.add('active');
+                showScreen('quiz-screen'); triggerAnimation('quiz-wrapper');
+            } else {
+                currentScreen = target; document.getElementById('nav-' + target + '-btn').classList.add('active');
+                showScreen(target + '-screen'); triggerAnimation(target + '-screen');
+                if (target === 'dashboard') renderDashboard();
+                if (target === 'leaderboard') renderLeaderboard();
+            }
+        }
+
+        function showScreen(id) {
+            if (id !== 'quiz-screen') hideOutOfHearts();
+            document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+            var s = document.getElementById(id); s.classList.add('active'); s.classList.add('animate-up');
+        }
+
+        function startWizard() {
+            document.getElementById('main-header').style.display = 'none';
+            document.getElementById('bottom-nav').style.display = 'none';
+            wizardStep = 1; document.getElementById('wizard-title').innerText = "Select Language";
+            renderLangButtons(); showScreen('wizard-screen');
+        }
+
+        function renderLangButtons() {
+            var g = document.getElementById('lang-grid'); g.innerHTML = '';
+            LANGUAGES.forEach(function(lang) {
+                if (wizardStep === 1 && lang.id === 0) return;
+                if (wizardStep === 2 && lang.id === state.sourceLang) return;
+                var b = document.createElement('div'); b.className = 'lang-btn';
+                b.innerHTML = '<span class="emoji">' + lang.emoji + '</span><span>' + lang.name + '</span>';
+                b.onclick = function() { handleLangSelect(lang.id); }; g.appendChild(b);
+            });
+        }
+
+        async function handleLangSelect(id) {
+            if (wizardStep === 1) { state.sourceLang = id; wizardStep = 2; document.getElementById('wizard-title').innerText = "Native Language"; triggerAnimation('wizard-screen'); renderLangButtons(); }
+            else { state.targetLang = id; state.langSwitches = (state.langSwitches||0)+1; saveState(); await fetchDatabase(state.mode); }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // [FIX] loadQuestion — Listening mode HIDES the target word
+        // ═══════════════════════════════════════════════════════════════
+        async function loadQuestion() {
+            if (dbMatrix.length === 0) return;
+            if (getCurrentLives() <= 0) { showOutOfHearts(); return; }
+            hideOutOfHearts(); clearTimeout(answerTimeoutId);
+            canAnswer = true; questionLoadTime = Date.now();
+
+            var pool = null;
+            if (state.reviewMode === 'mistakes') { pool = state.mistakeBank; if (!pool || !pool.length) { showToast("No mistakes! Normal mode."); state.reviewMode='normal'; saveState(); updateReviewChips(); pool=null; } }
+            else if (state.reviewMode === 'favorites') { pool = state.favorites; if (!pool || !pool.length) { showToast("No favorites! Normal mode."); state.reviewMode='normal'; saveState(); updateReviewChips(); pool=null; } }
+
+            if (pool && pool.length > 0) currentWordIndex = pool[Math.floor(Math.random()*pool.length)];
+            else if (state.reviewMode === 'srs') { var si = getNextSRSWord(); currentWordIndex = si >= 0 ? si : Math.floor(Math.random()*dbMatrix.length); }
+            else currentWordIndex = Math.floor(Math.random() * dbMatrix.length);
+
+            var row = dbMatrix[currentWordIndex];
+            var srcCol = state.isReverseMode ? state.targetLang : state.sourceLang;
+            var tgtCol = state.isReverseMode ? state.sourceLang : state.targetLang;
+            // [FIX] Strip asterisks from correct answer for display and comparison
+            var correctOpt = (row[tgtCol] || "N/A").toString().replace(/\*/g, '');
+            var questionWord = (row[srcCol] || "N/A").toString();
+            currentRawTextForSpeech = questionWord.replace(/\*/g, '');
+
+            var srcObj = LANGUAGES.find(function(l) { return l.id === srcCol; });
+            var tgtObj = LANGUAGES.find(function(l) { return l.id === tgtCol; });
+            var srcName = srcObj ? srcObj.name : ''; var tgtName = tgtObj ? tgtObj.name : '';
+            var modeTag = state.isListeningMode ? ' (Listening)' : '';
+            var reviewTag = state.reviewMode !== 'normal' ? ' [' + state.reviewMode.toUpperCase() + ']' : '';
+            document.getElementById('translation-direction').innerText = srcName + ' → ' + tgtName + modeTag + reviewTag;
+
+            var wordDisplay = document.getElementById('word-display');
+            // [FIX] Listening mode: COMPLETELY HIDE the target word — user must listen, not read
+            if (state.isListeningMode) {
+                wordDisplay.innerHTML = '<span style="font-size:28px;opacity:0.5;">🔊</span>';
+                wordDisplay.style.visibility = 'hidden';
+            } else {
+                wordDisplay.style.visibility = 'visible';
+                var displayHTML = escapeHtml(questionWord);
+                if (questionWord.indexOf('*') >= 0) displayHTML = escapeHtml(questionWord).replace(/\*(.*?)\*/g, '<span class="highlight-word">$1</span>');
+                wordDisplay.innerHTML = displayHTML;
+            }
+
+            updateStarButton();
+            var oc = document.getElementById('options-container'), tc = document.getElementById('typing-container');
+            var ti = document.getElementById('typing-indicator');
+            if (ti) ti.classList.toggle('active', state.typingMode);
+            if (state.typingMode) {
+                oc.style.display = 'none'; tc.classList.add('active');
+                var inp = document.getElementById('typing-input');
+                if (inp) { inp.value = ''; setTimeout(function() { inp.focus(); }, 300); }
+            } else {
+                oc.style.display = 'grid'; tc.classList.remove('active');
+                var wrong = [], safety = 0, maxD = Math.min(3, dbMatrix.length - 1);
+                while (wrong.length < maxD && safety < 1000) {
+                    var r = Math.floor(Math.random() * dbMatrix.length);
+                    if (r === currentWordIndex) { safety++; continue; }
+                    var w = (dbMatrix[r][tgtCol] || "").toString().replace(/\*/g, '');
+                    if (w !== correctOpt && wrong.indexOf(w) === -1 && w !== "") wrong.push(w);
+                    safety++;
+                }
+                var all = [correctOpt].concat(wrong).sort(function() { return Math.random() - 0.5; });
+                oc.innerHTML = '';
+                all.forEach(function(opt) {
+                    var b = document.createElement('button'); b.className = 'option-btn'; b.innerText = opt;
+                    b.onclick = function() { checkAnswer(b, opt, correctOpt); };
+                    oc.appendChild(b);
+                });
+            }
+
+            if (state.ttsOn) {
+                var shortLang = srcObj ? srcObj.ttsCode : 'en';
+                setTimeout(function() { playTTS(currentRawTextForSpeech, shortLang); }, state.isListeningMode ? 100 : 300);
+            }
+            updateReviewChips();
+        }
+
+        function checkAnswer(btn, selected, correct) {
+            if (!canAnswer) return;
+            canAnswer = false;
+            var answerTime = Date.now() - questionLoadTime;
+            // [FIX] Direct string comparison — correctOpt is already stripped of asterisks in loadQuestion
+            var isCorrect = selected === correct;
+            handleAnswerResult(isCorrect, correct, answerTime);
+        }
+
+        function handleAnswerResult(isCorrect, correct, answerTime) {
+            try {
+                var haptic = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback ? window.Telegram.WebApp.HapticFeedback : null;
+                updateSRS(currentWordIndex, isCorrect);
+                state.sessionStats.count++;
+                if (isCorrect) state.sessionStats.correct++;
+                else {
+                    state.sessionStats.wrong++;
+                    var row = dbMatrix[currentWordIndex];
+                    var srcCol = state.isReverseMode ? state.targetLang : state.sourceLang;
+                    state.sessionStats.missedWords.push({ question: (row[srcCol]||"").toString().replace(/\*/g,''), answer: correct });
+                }
+                if (isCorrect) {
+                    if (haptic) haptic.notificationOccurred('success');
+                    playSfx('correct');
+                    document.querySelectorAll('.option-btn').forEach(function(b) { if (b.innerText === correct) b.classList.add('correct'); });
+                    state.streak++; if (state.streak > state.bestStreak) state.bestStreak = state.streak;
+                    state.totalCorrect++;
+                    if (state.mistakeBank.indexOf(currentWordIndex) >= 0) recordCorrectForMistake(currentWordIndex);
+                    var baseXP = (state.mode === 'sentence') ? XP_BASE_SENTENCE : XP_BASE_WORD;
+                    var bm = Math.min(Math.floor(state.streak/4)*0.2, 1.0);
+                    var fxp = Math.round(baseXP * (1 + bm));
+                    if (answerTime < 2000) { fxp = Math.round(fxp * 1.5); showToast('⚡ Speed +' + fxp + ' XP', 2000); }
+                    state.score += fxp;
+                } else {
+                    if (haptic) haptic.notificationOccurred('error');
+                    playSfx('wrong');
+                    document.querySelectorAll('.option-btn').forEach(function(b) { if (b.innerText === correct) b.classList.add('wrong'); });
+                    try {
+                        var app = document.querySelector('.app-container');
+                        if (app) { app.classList.remove('screen-shake','screen-flash-red'); void app.offsetWidth; app.classList.add('screen-shake','screen-flash-red'); setTimeout(function() { app.classList.remove('screen-shake','screen-flash-red'); }, 500); }
+                    } catch(e) {}
+                    state.streak = 0; state.totalWrong++;
+                    state.score = Math.max(0, state.score - XP_PENALTY);
+                    loseLife(); addToMistakeBank(currentWordIndex);
+                }
+                checkAchievements({ answerTime: answerTime });
+                updateQuestProgress('answer', 1);
+                updateQuestProgress('streak', state.streak);
+                if (state.mistakeBank.indexOf(currentWordIndex) >= 0 && isCorrect) updateQuestProgress('review', 1);
+                saveState(); updateXPUI(); updateHeartsUI(); checkLevelUp(); checkSessionSummary();
+            } catch(err) { console.error('handleAnswerResult error:', err); }
+
+            if (!isCorrect && getCurrentLives() <= 0) { clearTimeout(answerTimeoutId); answerTimeoutId = setTimeout(function() { showOutOfHearts(); }, 800); return; }
+            clearTimeout(answerTimeoutId); answerTimeoutId = setTimeout(function() { loadQuestion(); }, 1200);
+        }
+
+        function replayAudio() {
+            var srcCol = state.isReverseMode ? state.targetLang : state.sourceLang;
+            var obj = LANGUAGES.find(function(l) { return l.id === srcCol; });
+            playTTS(currentRawTextForSpeech, obj ? obj.ttsCode : 'en');
+        }
+
+        // ─── LEADERBOARD ───
+        async function renderLeaderboard() {
+            var c = document.getElementById('leaderboard-list');
+            c.innerHTML = '<div style="display:flex;justify-content:center;padding:40px;"><div class="loader"></div></div>';
+            var users = [], myId = tgUser ? tgUser.id : 'local';
+            var action = currentLeaderboardTab === 'friends' ? 'getFriendsLeaderboard' : 'getLeaderboard';
+            var suffix = currentLeaderboardTab === 'friends' ? '&userId=' + myId : '';
+            try {
+                var resp = await fetchWithTimeout(API_URL + (API_URL.includes('?') ? '&' : '?') + 'action=' + action + suffix, { redirect:'follow' }, 10000);
+                var txt = await resp.text();
+                try { var d = JSON.parse(txt); if (d && d.status==='success' && Array.isArray(d.data)) users=d.data; else if (Array.isArray(d)) users=d; } catch(e) {}
+            } catch(e) { console.error("Leaderboard error:", e); }
+            if (!users || !users.length) users = [{ userId:myId, username:getDisplayUsername(tgUser), xp:state.score, strikes:Math.max(state.streak,state.bestStreak) }];
+            if (!users.find(function(u) { return String(u.userId||u.id)===String(myId); })) users.push({ userId:myId, username:getDisplayUsername(tgUser), xp:state.score, strikes:Math.max(state.streak,state.bestStreak) });
+            c.innerHTML = '';
+            users.sort(function(a,b) { return (parseInt(b.xp)||0)-(parseInt(a.xp)||0); });
+            users.forEach(function(u, i) {
+                var rank = i+1, rc = '', ri = '#'+rank;
+                if (rank===1) { rc='gold'; ri='🥇'; } else if (rank===2) { rc='silver'; ri='🥈'; } else if (rank===3) { rc='bronze'; ri='🥉'; }
+                var isMe = String(u.userId||u.id)===String(myId);
+                var el = document.createElement('div'); el.className = 'lb-item' + (isMe?' is-me':'');
+                el.innerHTML = '<div class="lb-rank '+rc+'">'+ri+'</div><div class="lb-avatar">👤</div><div class="lb-info"><span class="lb-name">'+escapeHtml(u.username||'Anon')+(isMe?' (You)':'')+'</span><div style="display:flex;gap:10px;"><span class="lb-xp">'+parseInt(u.xp||0).toLocaleString()+' XP</span><span class="lb-xp" style="color:var(--accent-gold);">🔥 '+(u.strikes||0)+'</span></div></div>';
+                c.appendChild(el);
+            });
+        }
+
+        // ─── DASHBOARD ───
+        function renderDashboard() {
+            document.getElementById('dash-level').innerText = getLevel(state.score);
+            document.getElementById('dash-xp').innerText = state.score;
+            document.getElementById('dash-best-streak').innerText = state.bestStreak;
+            var total = state.totalCorrect + state.totalWrong;
+            document.getElementById('dash-accuracy').innerText = total > 0 ? Math.round((state.totalCorrect/total)*100)+'%' : '0%';
+            document.getElementById('dash-streak-days').innerText = state.consecutiveDays;
+            var df = document.getElementById('dash-freeze');
+            if (df) { if (state.streakFreezes > 0) { df.innerText = '❄️ '+state.streakFreezes; df.style.display='inline-block'; } else df.style.display='none'; }
+            document.querySelectorAll('.milestone').forEach(function(el) { var d = parseInt(el.dataset.days); if (state.consecutiveDays >= d) el.classList.add('reached'); else el.classList.remove('reached'); });
+            renderAchievements(); renderDailyQuests(); renderSRSDashboard(); drawWeeklyChart(); renderActivityHeatmap();
+        }
+
+        function drawWeeklyChart() {
+            var c = document.getElementById('weekly-chart'), ctx = c.getContext('2d');
+            var dpr = window.devicePixelRatio||1, rect = c.getBoundingClientRect();
+            c.width = rect.width*dpr; c.height = rect.height*dpr; ctx.scale(dpr,dpr);
+            var w = rect.width, h = rect.height; ctx.clearRect(0,0,w,h);
+            var vals = [], labels = [], days = ['S','M','T','W','T','F','S'], now = new Date();
+            for (var i = 6; i >= 0; i--) { var d = new Date(); d.setDate(now.getDate()-i); var mk = d.getFullYear()+'-'+d.getMonth(); var active = (state.usageData[mk] && state.usageData[mk].indexOf(d.getDate())>=0) ? 1 : 0; vals.push(active?10:1); labels.push(days[d.getDay()]); }
+            var bw = (w-(vals.length*8))/vals.length;
+            vals.forEach(function(v,i) {
+                var bh = (v/10)*(h-25), x = 5+i*(bw+8), y = h-20-bh;
+                ctx.fillStyle = v>1 ? 'rgba(99,102,241,0.8)' : 'rgba(255,255,255,0.08)';
+                ctx.beginPath(); ctx.roundRect(x,y,bw,bh>0?bh:4,[4,4,4,4]); ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText(labels[i], x+bw/2, h-5);
+            });
+        }
+
+        function renderActivityHeatmap() {
+            var g = document.getElementById('activity-grid'); g.innerHTML = '';
+            var now = new Date(), y = now.getFullYear(), m = now.getMonth();
+            var mn = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+            document.getElementById('month-title').innerText = mn[m] + ' Activity';
+            var dim = new Date(y,m+1,0).getDate(), mk = y+'-'+m, ad = state.usageData[mk]||[];
+            for (var i = 1; i <= dim; i++) {
+                var el = document.createElement('div'); el.className = 'activity-day'; el.innerText = i;
+                var isActive = ad.indexOf(i) >= 0;
+                if (isActive) el.classList.add('active');
+                (function(dn, act) { el.addEventListener('click', function(e) { e.stopPropagation(); showHeatmapTooltip(el, dn, y, m, act); }); })(i, isActive);
+                g.appendChild(el);
+            }
+        }
+
+        var heatmapTooltipEl = null;
+        function showHeatmapTooltip(el, day, y, m, active) {
+            hideHeatmapTooltip();
+            var mn = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            var count = active ? Math.floor(Math.random()*10)+3 : 0;
+            heatmapTooltipEl = document.createElement('div'); heatmapTooltipEl.className = 'heatmap-tooltip';
+            heatmapTooltipEl.innerHTML = '<div class="ht-label">' + mn[m] + ' ' + day + ', ' + y + '</div><div class="ht-value">' + (active ? '✅ ~'+count+' questions' : '⬜ Inactive') + '</div>';
+            document.body.appendChild(heatmapTooltipEl);
+            var r = el.getBoundingClientRect();
+            heatmapTooltipEl.style.left = Math.min(r.left, window.innerWidth-190)+'px';
+            heatmapTooltipEl.style.top = (r.top - heatmapTooltipEl.offsetHeight - 8)+'px';
+            setTimeout(hideHeatmapTooltip, 2500);
+        }
+        function hideHeatmapTooltip() { if (heatmapTooltipEl && heatmapTooltipEl.parentNode) heatmapTooltipEl.parentNode.removeChild(heatmapTooltipEl); heatmapTooltipEl = null; }
+
+        // ─── SETTINGS ───
+        function toggleSettings() { var m = document.getElementById('settings-modal'); m.style.display = m.style.display === 'flex' ? 'none' : 'flex'; }
+        function toggleSound() { state.soundOn = !state.soundOn; saveState(); document.getElementById('sound-toggle').innerHTML = '<span class="s-icon">🔊</span><span>Sound: '+(state.soundOn?'ON':'OFF')+'</span>'; }
+        function toggleTTS() { state.ttsOn = !state.ttsOn; saveState(); document.getElementById('tts-toggle').innerHTML = '<span class="s-icon">🗣️</span><span>TTS: '+(state.ttsOn?'ON':'OFF')+'</span>'; }
+        function toggleReverseMode() { state.isReverseMode = !state.isReverseMode; saveState(); document.getElementById('reverse-toggle').innerHTML = '<span class="s-icon">🔄</span><span>Reverse: '+(state.isReverseMode?'ON':'OFF')+'</span>'; if (currentScreen==='quiz') loadQuestion(); }
+        function toggleListeningMode() { state.isListeningMode = !state.isListeningMode; saveState(); document.getElementById('listening-toggle').innerHTML = '<span class="s-icon">👂</span><span>Listening: '+(state.isListeningMode?'ON':'OFF')+'</span>'; if (currentScreen==='quiz') loadQuestion(); }
+        function shareProgress() {
+            var t = state.totalCorrect+state.totalWrong, acc = t>0 ? Math.round((state.totalCorrect/t)*100) : 0;
+            var txt = '🔥 '+state.consecutiveDays+'-day streak!\n🏆 Level '+getLevel(state.score)+' • '+state.score.toLocaleString()+' XP\n🎯 '+acc+'% Accuracy';
+            var url = 'https://t.me/share/url?url=&text='+encodeURIComponent(txt);
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) window.Telegram.WebApp.openTelegramLink(url); else window.open(url,'_blank');
+        }
+        function resetLanguages() {
+            clearTimeout(answerTimeoutId); state.sourceLang=null; state.targetLang=null;
+            state.srsData={}; state.mistakeBank=[]; state.mistakeStats={}; dbMatrix=[];
+            localStorage.removeItem(LS_PREFIX+'sourceLang'); localStorage.removeItem(LS_PREFIX+'targetLang');
+            toggleSettings(); startWizard();
+        }
+        function resetScore() {
+            clearTimeout(answerTimeoutId); state.score=0; state.streak=0; state.bestStreak=0;
+            state.totalCorrect=0; state.totalWrong=0; state.usageData={};
+            state.lives=MAX_LIVES; state.lastLifeUpdate=null; state.consecutiveDays=0; state.lastLoginDate=null;
+            state.achievements={}; state.srsData={}; state.mistakeBank=[]; state.mistakeStats={};
+            state.favorites=[]; state.dailyQuests={date:null,quests:[]};
+            state.streakFreezes=0; state.syncQueue=[]; state.sessionStats={count:0,correct:0,wrong:0,missedWords:[]};
+            state.lastKnownLevel=1; lastKnownLevel=1;
+            saveState(); updateXPUI(); updateHeartsUI(); toggleSettings();
+        }
+
+        // ─── INIT ───
+        async function init() {
+            try { if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) tgUser = window.Telegram.WebApp.initDataUnsafe.user; } catch(e) {}
+            updateXPUI(); updateHeartsUI(); trackUsage(); checkDailyStreak(); initDailyQuests(); processSyncQueue();
+            document.getElementById('sound-toggle').innerHTML = '<span class="s-icon">🔊</span><span>Sound: '+(state.soundOn?'ON':'OFF')+'</span>';
+            document.getElementById('tts-toggle').innerHTML = '<span class="s-icon">🗣️</span><span>TTS: '+(state.ttsOn?'ON':'OFF')+'</span>';
+            document.getElementById('reverse-toggle').innerHTML = '<span class="s-icon">🔄</span><span>Reverse: '+(state.isReverseMode?'ON':'OFF')+'</span>';
+            document.getElementById('listening-toggle').innerHTML = '<span class="s-icon">👂</span><span>Listening: '+(state.isListeningMode?'ON':'OFF')+'</span>';
+            document.getElementById('typing-toggle').innerHTML = '<span class="s-icon">⌨️</span><span>Typing: '+(state.typingMode?'ON':'OFF')+'</span>';
+            updateReviewChips();
+            if (heartTimerInterval) clearInterval(heartTimerInterval);
+            heartTimerInterval = setInterval(function() {
+                updateHeartsUI();
+                if (getCurrentLives() > 0 && document.getElementById('out-of-hearts-overlay').style.display === 'flex') { hideOutOfHearts(); if (currentScreen === 'quiz') loadQuestion(); }
+            }, 60000);
+            if (state.sourceLang !== null && state.targetLang !== null) await fetchDatabase(state.mode);
+            else startWizard();
+        }
+
+        window.onload = function() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                var tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+                try { tg.setHeaderColor('#0f0f14'); tg.setBackgroundColor('#0f0f14'); tg.enableClosingConfirmation(); } catch(e) {}
+                if (tg.initDataUnsafe && tg.initDataUnsafe.user) tgUser = tg.initDataUnsafe.user;
+            }
+            document.addEventListener('click', function() { if (!audioReady) onFirstInteraction(); }, { once: true });
+            document.addEventListener('visibilitychange', function() {
+                document.body.style.animationPlayState = document.hidden ? 'paused' : 'running';
+                if (!document.hidden && sfxCtx && sfxCtx.state === 'suspended') sfxCtx.resume().catch(function(){});
+            });
+            window.addEventListener('beforeunload', function() { syncScoreToBackend(); processSyncQueue(); });
+            window.addEventListener('online', function() { processSyncQueue(); showToast('🌐 Back online!', 3000); });
+            window.addEventListener('resize', function() { if (currentScreen === 'dashboard') drawWeeklyChart(); });
+            document.getElementById('settings-modal').addEventListener('click', function(e) { if (e.target.id === 'settings-modal') toggleSettings(); });
+            document.getElementById('typing-input').addEventListener('keypress', function(e) { if (e.key === 'Enter') submitTypedAnswer(); });
+            init();
+        };
+    </script>
+</body>
+</html>
