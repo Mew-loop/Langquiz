@@ -1521,12 +1521,46 @@
             if (currentAudio) { try { currentAudio.pause(); } catch(e){} currentAudio.onended = null; currentAudio.onerror = null; currentAudio = null; }
             try { window.speechSynthesis.cancel(); } catch(e) {}
             var stop = function() { try { if (btn) btn.classList.remove('playing'); } catch(e) {} };
-            if (text.length > 150 || state.mode === 'sentence' || isMobileDevice()) { playFallbackTTS(text, code, stop); return; }
+
+            // NOTE: We intentionally do NOT special-case mobile here anymore.
+            // Telegram's in-app WebView (iOS + Android) has unreliable/absent
+            // window.speechSynthesis support, so native TTS silently fails on
+            // mobile even though it works in a normal desktop browser. The
+            // Google Translate TTS audio file plays fine everywhere once
+            // audio is unlocked by the first tap, so we use that as the
+            // primary path on ALL devices and only fall back to
+            // speechSynthesis for text too long for the TTS URL, or if the
+            // audio itself genuinely fails.
+            if (text.length > 190 || state.mode === 'sentence') { playFallbackTTS(text, code, stop); return; }
+
             var url = 'https://translate.google.com/translate_tts?ie=UTF-8&client=gtx&tl=' + code + '&q=' + encodeURIComponent(text);
             currentAudio = new Audio(url);
-            currentAudio.onended = function() { currentAudio = null; stop(); };
-            currentAudio.onerror = function() { currentAudio = null; playFallbackTTS(text, code, stop); };
-            try { var p = currentAudio.play(); if (p !== undefined) p.catch(function() { if (currentAudio) currentAudio = null; playFallbackTTS(text, code, stop); }); } catch(e) { playFallbackTTS(text, code, stop); }
+            currentAudio.preload = 'auto';
+            currentAudio.setAttribute('playsinline', '');
+
+            var settled = false;
+            var fallbackOnce = function() {
+                if (settled) return; settled = true;
+                clearTimeout(stallTimer);
+                if (currentAudio) { try { currentAudio.pause(); } catch(e){} currentAudio.onended = null; currentAudio.onerror = null; }
+                currentAudio = null;
+                playFallbackTTS(text, code, stop);
+            };
+
+            // Mobile networks / Telegram's WebView occasionally hang the
+            // request without ever firing onerror. If nothing has happened
+            // within 3s, treat it as failed and fall back rather than
+            // leaving the user with dead silence.
+            var stallTimer = setTimeout(fallbackOnce, 3000);
+
+            currentAudio.oncanplay = function() { clearTimeout(stallTimer); };
+            currentAudio.onended = function() { settled = true; clearTimeout(stallTimer); currentAudio = null; stop(); };
+            currentAudio.onerror = fallbackOnce;
+
+            try {
+                var p = currentAudio.play();
+                if (p !== undefined) p.catch(fallbackOnce);
+            } catch(e) { fallbackOnce(); }
         }
 
         function playFallbackTTS(text, code, cb) {
